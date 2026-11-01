@@ -75,11 +75,11 @@ def _path_params(path: str) -> tuple[str, list[dict]]:
     return _PLACEHOLDER_RE.sub(rename, path), params
 
 
-_TOKEN_RE = re.compile(r"\.([^.\[\]]+)|\[(\d+)\]")
+_TOKEN_RE = re.compile(r"\.([^.\[\]]+)|\[(\d*)\]")
 
 
 def _json_schema(fields: list[tuple[str, list[str]]]) -> dict:
-    """Rebuild a nested object schema from JSONPath-style names (`$.user.tags[0]`)."""
+    """Rebuild a nested object schema from JSONPath-style names (`$.user.tags[]`)."""
     root: dict = {}
     for name, types in fields:
         tokens = [(m.group(1), m.group(2)) for m in _TOKEN_RE.finditer(name[1:])]

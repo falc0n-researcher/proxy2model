@@ -34,6 +34,7 @@ from .infer import param_types
 from .extract import MAX_SCAN_BYTES, extract_html_refs, extract_js_refs, extract_script_assets
 from ..core.stack import detect as detect_stack
 from .redact import (
+    REDACTED,
     SecretFingerprint,
     classify_segment,
     redact_body,
@@ -307,8 +308,8 @@ def _parse_body_params(body: str, content_type: str) -> list[tuple[str, str]]:
                     kk = classify_segment(str(k)[:200]) or str(k)[:200]
                     walk(v, f"{prefix}.{kk}", depth + 1)
             elif isinstance(obj, list):
-                for i, v in enumerate(obj[:5]):
-                    walk(v, f"{prefix}[{i}]", depth + 1)
+                for v in obj[:5]:              # items share one name: `$.events[].id`
+                    walk(v, f"{prefix}[]", depth + 1)
             else:
                 out.append((prefix, str(obj)))
 
@@ -367,6 +368,41 @@ def _cookie_names(cookie_header: str) -> list[str]:
         if name and re.match(r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]{1,100}$", name):
             names.append(name)
     return names
+
+
+def _exchange_secrets(req_headers, resp_headers) -> list[str]:
+    """Cookie and credential values this exchange sent or set, longest first.
+
+    Masking by name catches them in their own header; a server can echo the same value
+    elsewhere (a session id in a body, a deployment cookie in `X-Deployment-Id`), so they are
+    masked wherever they appear in the exchange. Short values (`1`, `en`) are left alone."""
+    vals: set[str] = set()
+    for k, v in req_headers:
+        low = k.lower()
+        if low == "cookie":
+            vals |= {p.split("=", 1)[1].strip() for p in v.split(";") if "=" in p}
+        elif low == "authorization" or any(h in low for h in _CREDENTIAL_HEADER_HINTS):
+            vals |= {v.strip(), v.strip().split(" ")[-1]}
+    for k, v in resp_headers:
+        if k.lower() == "set-cookie" and "=" in v:
+            vals.add(v.split(";", 1)[0].split("=", 1)[1].strip())
+    out = set()
+    for x in vals:
+        if len(x) >= 8:
+            out |= {x, urllib.parse.quote(x, safe=""), urllib.parse.unquote(x)}
+    return sorted((x for x in out if len(x) >= 8), key=len, reverse=True)
+
+
+def _scrubber(values: list[str]):
+    if not values:
+        return lambda text: text
+
+    def scrub(text: str) -> str:
+        for v in values:
+            if v in text:
+                text = text.replace(v, REDACTED)
+        return text
+    return scrub
 
 
 def _set_cookies(resp_headers) -> list[dict]:
@@ -934,7 +970,9 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
     preflight = method == "OPTIONS" and bool(_header(req_headers, "access-control-request-method"))
 
     secrets: list[SecretFingerprint] = []
+    scrub = _scrubber(_exchange_secrets(req_headers, resp_headers))
     red_path, s0 = redact_path(path)
+    red_path = scrub(red_path)
     ptemplate = route_template(red_path, template_path(red_path))
     tech = []
     for k, v in resp_headers:
@@ -943,17 +981,22 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
 
     req_headers_r, s1 = redact_headers(req_headers)
     resp_headers_r, s2 = redact_headers(resp_headers)
+    req_headers_r = [(k, scrub(v)) for k, v in req_headers_r]
+    resp_headers_r = [(k, scrub(v)) for k, v in resp_headers_r]
     raw_body_params = _parse_body_params(req_body_text, req_ct)
     ptypes = param_types("query", raw_query) + param_types("body", raw_body_params)
     query_r, s3 = redact_params(raw_query)
     body_params_r, s4 = redact_params(raw_body_params)
+    query_r = [(k, scrub(v)) for k, v in query_r]
+    body_params_r = [(k, scrub(v)) for k, v in body_params_r]
     req_body_r, s5 = redact_body(req_body_text[:BODY_KEEP])
+    req_body_r = scrub(req_body_r)
     gql_ops = _gql_ops(ptemplate, req_body_r, req_ct)
     tech_r = []
     for k, v in tech:
         masked, s7 = redact_body(v)
         secrets.extend(s7)
-        tech_r.append((k, masked))
+        tech_r.append((k, scrub(masked)))
 
     # the whole response body is scanned (secrets + references), up to a cap
     is_js = _is_js_response(mime, ptemplate, resp_ct)
@@ -969,6 +1012,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
         if len(scan_b) > MAX_SCAN_BYTES:
             scan_b, scan_truncated = scan_b[:MAX_SCAN_BYTES], True
         resp_full_r, s6 = redact_body(scan_b.decode("utf-8", "replace"))
+        resp_full_r = scrub(resp_full_r)
         js_refs = extract_js_refs(resp_full_r) if is_js else extract_html_refs(resp_full_r)
         if is_js:
             hdr_map = next((v for k, v in resp_headers if k.lower() in ("sourcemap", "x-sourcemap")), None)
@@ -977,7 +1021,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
         stack_text = resp_full_r
     else:
         resp_body_r, s6 = redact_body(resp_body_b[:BODY_KEEP * 5].decode("utf-8", "replace"))
-        resp_body_r = resp_body_r[:BODY_KEEP]
+        resp_body_r = scrub(resp_body_r)[:BODY_KEEP]
 
     stack = detect_stack({k.lower(): v for k, v in resp_headers},
                          [c["name"] for c in set_cookies] + cookie_names, stack_text, red_path, is_js or is_html)

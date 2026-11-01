@@ -20,6 +20,7 @@ from .build import (
 from .analyze import (
     cmd_q, cmd_query, cmd_crossrole, cmd_osint, cmd_graph, cmd_methodology, cmd_gaps, cmd_changes, cmd_falsify, cmd_openapi, cmd_animate,
 )
+from .mcp import cmd_mcp
 from .live import (
     cmd_serve,
 )
@@ -34,7 +35,7 @@ COMMANDS = [
     ("diff", "what changed between two builds"),
     ("openapi", "print the observed API as OpenAPI 3.0"),
 ]
-MORE = ["cross-role", "builds", "watch", "q", "graph", "gaps", "changes",
+MORE = ["cross-role", "builds", "watch", "q", "graph", "gaps", "changes", "mcp",
         "methodology", "falsify", "osint", "animate"]
 
 
@@ -283,6 +284,11 @@ def main(argv=None) -> int:
     sv.add_argument("--verbose", action="store_true", help="log every HTTP request to the listener")
     sv.set_defaults(func=cmd_serve)
 
+    mc = sub.add_parser("mcp", help="serve the built models to an AI agent over MCP (stdio); read-only")
+    mc.add_argument("--out", default="proxy2model-out",
+                    help="output directory holding the models (default: proxy2model-out); give an absolute path")
+    mc.set_defaults(func=cmd_mcp)
+
     oa = sub.add_parser("openapi", help="export the observed API as an OpenAPI 3.0 document")
     oa.add_argument("webapp", type=_name("webapp"), help="model name used at build time")
     oa.add_argument("-o", "--output", metavar="FILE", help="write here instead of stdout")
@@ -366,7 +372,7 @@ def main(argv=None) -> int:
 
     argv = list(sys.argv[1:] if argv is None else argv)
     known = {"build", "crawl", "query", "q", "cross-role", "osint", "graph", "methodology",
-             "gaps", "openapi", "serve", "changes", "diff", "builds", "watch", "falsify", "animate", "-h", "--help", "--version"}
+             "gaps", "openapi", "serve", "mcp", "changes", "diff", "builds", "watch", "falsify", "animate", "-h", "--help", "--version"}
     # bare `proxy2model file.xml ...` → treat as build, but only when the first
     # word is a real file; a typo'd subcommand gets a clear error instead
     if argv and argv[0] not in known and not argv[0].startswith("-"):

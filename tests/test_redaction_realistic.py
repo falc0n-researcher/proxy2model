@@ -66,3 +66,32 @@ def test_the_secret_never_survives(name, monkeypatch):
 def test_ordinary_text_is_left_alone(text, monkeypatch):
     monkeypatch.setenv("PROXY2MODEL_FP_KEY", "ci")
     assert redact_named(redact_value_patterns(text)[0]) == text
+
+
+def test_a_cookie_echoed_elsewhere_in_the_exchange_is_masked(tmp_path):
+    """Found in a real capture: a deployment cookie's value came back in an `X-Deployment-Id` header.
+    A cookie or credential value is masked wherever the exchange repeats it: headers, body, URL."""
+    import base64
+    import json
+    import os
+    from proxy2model.cli import main
+
+    sid = "a8abbc4a34ca3634a80b0123456789abcdef"
+    bearer = "opaqueBearerValue12345"
+    rq = (f"GET /account?ref={sid} HTTP/1.1\r\nHost: shop.test\r\nCookie: lang=en; sid={sid}\r\n"
+          f"Authorization: Bearer {bearer}\r\n\r\n")
+    rs = (f"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nSet-Cookie: sid={sid}; HttpOnly\r\n"
+          f"X-Deployment-Id: {sid}\r\nX-Debug: token={bearer}\r\n\r\n"
+          f'{{"session": "{sid}", "echo": "{bearer}", "lang": "en"}}')
+    xml = tmp_path / "x.xml"
+    xml.write_text('<?xml version="1.0"?><items><item><method>GET</method><host>shop.test</host><port>443</port>'
+                   f'<protocol>https</protocol><path>/account?ref={sid}</path>'
+                   f'<request base64="true">{base64.b64encode(rq.encode()).decode()}</request>'
+                   f'<response base64="true">{base64.b64encode(rs.encode()).decode()}</response></item></items>')
+    assert main([str(xml), "-w", "shop", "--out", str(tmp_path / "o")]) == 0
+    for root, _, files in os.walk(tmp_path / "o"):
+        for fn in files:
+            data = open(os.path.join(root, fn), "rb").read()
+            assert sid.encode() not in data and bearer.encode() not in data, fn
+    model = json.load(open(tmp_path / "o" / "shop" / "model.json"))
+    assert any(n["label"] == "sid" for n in model["nodes"] if n["type"] == "cookie")   # names survive

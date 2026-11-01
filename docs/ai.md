@@ -7,6 +7,22 @@ proxy2model history.xml --webapp shop
 cat proxy2model-out/shop/context.json
 ```
 
+## Or let an agent ask (MCP)
+
+`proxy2model mcp` serves your built models to any MCP client (Claude Code, Claude Desktop, Cursor, ...).
+The agent gets the same cited answers as the CLI: `list_models`, `query`, `bql`, `cross_role`, `builds`,
+`diff`, `gaps`, `openapi`. It is read-only and only sees the folder you give it.
+
+```bash
+claude mcp add proxy2model -- proxy2model mcp --out /absolute/path/to/proxy2model-out
+```
+
+Other clients take the same command in their config:
+
+```json
+{"mcpServers": {"proxy2model": {"command": "proxy2model", "args": ["mcp", "--out", "/absolute/path/to/proxy2model-out"]}}}
+```
+
 ## What is in it
 
 - endpoints: state (`STATIC_ONLY`, `RUNTIME_ONLY`, `BOTH`), statuses, parameter names, roles, credential kinds, callers
