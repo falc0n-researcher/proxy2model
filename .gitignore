@@ -1,0 +1,38 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Test / type caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool output — contains captured target data; never commit
+proxy2model-out/
+
+# Local fingerprint key
+*.key
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# uv side effects (project is setuptools-managed)
+uv.lock
+
+# real-site captures kept locally for testing redaction; never commit
+samples/sample-romaantwerpen.xml
+samples/sample-shop-bolt-new.xml
+samples/private/
