@@ -7,7 +7,7 @@ name = "proxy2model"
 dynamic = ["version"]
 description = "Turn captured proxy traffic into an evidence-backed model of a web app."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "falc0n" }]

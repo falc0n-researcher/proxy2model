@@ -18,7 +18,7 @@ each tied to the request that proves it. Secrets are masked before anything is w
 ## Install
 
 ```bash
-pip install git+https://github.com/falc0n-researcher/proxy2model    # Python 3.9+, no dependencies
+pip install git+https://github.com/falc0n-researcher/proxy2model    # Python 3.10+, no dependencies
 ```
 
 ## Quickstart
