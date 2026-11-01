@@ -25,7 +25,7 @@
   <div class="wrap">
     <a class="logo" href="./" aria-label="proxy2model home">
       <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 21.5 16 26l10-4.5" fill="none" stroke="#39d0ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 16.5 16 21l10-4.5" fill="none" stroke="#a594ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 6 6 10.5 16 15l10-4.5z" fill="#ff6a1a"/></svg>
-      <span>burp<b>2</b>model</span>
+      <span>proxy<b>2</b>model</span>
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a class="hide-sm" href="#how">How it works</a>
@@ -90,7 +90,7 @@
       <p>Every output is read from one graph. Values are masked at the parser; names and shapes survive.</p>
     </div>
     <div class="pipe">
-      <div class="card step reveal"><span class="num">01 · parse</span><h3>Stream</h3><p>Reads the Burp XML and scans JS and HTML bodies for endpoint references.</p></div>
+      <div class="card step reveal"><span class="num">01 · parse</span><h3>Stream</h3><p>Reads a Burp or HAR export, or traffic pushed live from Caido, and scans JS and HTML bodies for endpoint references.</p></div>
       <div class="card step reveal"><span class="num">02 · redact</span><h3>Mask</h3><p>Masks headers, parameters, bodies and URL paths. Secrets are kept only as keyed fingerprints.</p></div>
       <div class="card step reveal"><span class="num">03 · model</span><h3>Relate</h3><p>Sets scope, then builds edges: <span class="pill obs">OBSERVED</span> from traffic, <span class="pill inf">INFERRED</span> from code.</p></div>
       <div class="card step reveal"><span class="num">04 · reconcile</span><h3>Compare</h3><p>Compares code with runtime: <span class="pill both">BOTH</span> <span class="pill static">STATIC_ONLY</span> <span class="pill runtime">RUNTIME_ONLY</span></p></div>

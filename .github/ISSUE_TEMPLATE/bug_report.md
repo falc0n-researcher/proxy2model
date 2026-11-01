@@ -4,7 +4,7 @@ about: Something does not work as described
 labels: bug
 ---
 
-**What you ran** (command or Burp action, and the version):
+**What you ran** (the command, how the traffic was captured: Burp, HAR, Caido, crawl, and `proxy2model --version`):
 
 **What you expected:**
 

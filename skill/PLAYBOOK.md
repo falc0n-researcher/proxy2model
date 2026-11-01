@@ -45,6 +45,7 @@ Record the exchanges behind every node. Vocabulary: [reference/graph-schema.md](
 - **route**: `host SERVES route`, with statuses. **script**: `host LOADS script`.
 - **endpoint**: `host EXPOSES endpoint`, with method, statuses, per-role statuses, credentials seen, request count, and whether any request was anonymous.
 - **parameter** (names only): `route|endpoint USES_PARAMETER param`. GraphQL: `endpoint USES_OPERATION op`.
+  Record the kind of value each was seen with, decided from the raw value before masking, first match wins: jwt, uuid, email, integer, number, boolean, base64, string. Keep the label, never the value.
 - **cookie**: `host SETS_COOKIE cookie` with the weakest HttpOnly/Secure/SameSite flags seen. **auth**: `endpoint SENT_CREDENTIAL auth`. **role**: `role REACHED node`, if the capture is tagged with a role.
 - **Referer edges** (OBSERVED): if a request's Referer is a modelled in-scope page, link it with `CALLS`, `INCLUDES` or `NAVIGATES_TO`.
 

@@ -589,7 +589,7 @@ __TYPECSS__
 </head>
 <body>
 <header>
-  <div class="logo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 21.5 16 26l10-4.5" fill="none" stroke="var(--observed)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 16.5 16 21l10-4.5" fill="none" stroke="var(--inferred)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 6 6 10.5 16 15l10-4.5z" fill="var(--signal)"/></svg><span>burp<b>2</b>model</span></div>
+  <div class="logo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 21.5 16 26l10-4.5" fill="none" stroke="var(--observed)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 16.5 16 21l10-4.5" fill="none" stroke="var(--inferred)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 6 6 10.5 16 15l10-4.5z" fill="var(--signal)"/></svg><span>proxy<b>2</b>model</span></div>
   <div class="crumbs" id="crumbs"></div>
   <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="q" type="search" placeholder="Search endpoints, hosts, params, evidence…" aria-label="Search"></div>

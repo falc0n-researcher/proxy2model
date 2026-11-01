@@ -36,7 +36,7 @@ The machine builds comprehension. The human keeps judgment.
 4. **Run the task** the person asked for, from `tasks/`.
 5. **Answer under the evidence contract.** Offer the JSON shapes in [reference/outputs.md](reference/outputs.md) if they want to feed another tool.
 
-For large or repeated captures, the proxy2model CLI does the same method, with no dependencies beyond Python. From a source checkout: `python -m proxy2model build history.xml -w app`. The skill does not require it.
+For large or repeated captures, the proxy2model CLI does the same method, with no dependencies beyond Python: `pip install git+https://github.com/falc0n-researcher/proxy2model`, then `proxy2model history.xml -w app`, or `proxy2model serve -w app` to build live from Caido. The skill does not require it.
 
 ## Evidence contract (always)
 

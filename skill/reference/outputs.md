@@ -10,6 +10,10 @@ One JSON object: `app`, `scope`, `roles`, `counts` (per node type, plus the `api
 
 The trimmed package to give a model instead of raw traffic: `rules`, `shape`, capped lists of `routes`, `endpoints` (most interesting first), `scripts`, `third_parties`, the `trust` layer, `unknowns`, a `coverage` block that states the caps, a `graph` block (adjacency and reasoning views) and the `evidence` table.
 
+## openapi
+
+The observed API as an OpenAPI 3.0 document: one operation per endpoint the capture reached, `{id}`-style path segments as path parameters, query and body parameters with schemas from their value types (uuid becomes `format: uuid`, base64 `format: byte`), the status codes seen, and `x-proxy2model-evidence` listing the evidence ids behind each operation. Response bodies are not modelled.
+
 ## graph exports
 
 - Node-link JSON (`nodes` + `links`), for D3 or Cytoscape.

@@ -11,7 +11,7 @@ The model is a directed graph with stable, descriptive node ids.
 | `route` | 2 | a page / navigation | host, path, statuses |
 | `script` | 3 | a JavaScript file | host, scope |
 | `endpoint` | 4 | an API endpoint | method, host, path, `api_state`, statuses, `status_by_role`, credentials, requests, anonymous_requests |
-| `parameter` | 4 | a query or body parameter (name only) | location (query/body) |
+| `parameter` | 4 | a query or body parameter (name only) | location (query/body), types seen (jwt, uuid, email, integer, number, boolean, base64, string) |
 | `operation` | 4 | a GraphQL operation name | — |
 | `third_party` | 5 | an off-scope host | requests |
 | `auth` | 5 | a credential scheme seen on requests | — |
