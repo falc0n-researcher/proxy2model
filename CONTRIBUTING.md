@@ -32,6 +32,15 @@ src/proxy2model/
 - **No new runtime dependencies** in the Python package.
 - **Docs stay short and public.** Say what it does and how to use it; no internal notes.
 
+## Releasing
+
+1. Set `__version__` in `src/proxy2model/__init__.py` and give it a `## X.Y.Z` section in `CHANGELOG.md`.
+2. Rebuild the demo and example reports (`./demo.sh`, the Juice Shop loop in `docs/examples/README.md`).
+3. Look at it, not only the tests: open the report and the landing page, run `proxy2model` and a build,
+   and paste `serve --caido-script` into Caido. Unit tests do not see a stale logo or a broken paste.
+4. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`. The release workflow checks the tag
+   against the version and changelog, runs the tests, publishes to PyPI and creates the GitHub release.
+
 ## Pull requests
 
 Describe what changed and why, and say how you tested it. Do not attach real captures: use the samples in `samples/` or invent one. Keep a PR to one change.

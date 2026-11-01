@@ -1,0 +1,60 @@
+name: release
+
+# Push a tag like v2.0.0. The tag must match proxy2model.__version__ and have a CHANGELOG section.
+# PyPI publishing uses trusted publishing: no token is stored in the repository.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tag matches the version and the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          code=$(python -c "import re;print(re.search(r'__version__ = \"(.+?)\"', open('src/proxy2model/__init__.py').read()).group(1))")
+          test "$version" = "$code" || { echo "tag $version but __version__ is $code"; exit 1; }
+          grep -q "^## $version" CHANGELOG.md || { echo "no '## $version' section in CHANGELOG.md"; exit 1; }
+      - run: pip install -e ".[dev]" && pytest -q
+      - run: python -m pip install build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Release with the changelog section as notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="## $version" 'index($0, v) == 1 {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" dist/* --title "proxy2model $version" --notes-file notes.md

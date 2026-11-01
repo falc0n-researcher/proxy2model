@@ -15,6 +15,25 @@ each tied to the request that proves it. Secrets are masked before anything is w
 
 </div>
 
+## What it finds
+
+From the bundled capture of four [OWASP Juice Shop](https://owasp.org/www-project-juice-shop/) sessions
+(417 requests: anonymous, user, accounting, admin), in about two seconds on a laptop:
+
+- **16 endpoints the app's JavaScript names but the browsing never called**: `/rest/admin`,
+  `/rest/chat`, `/rest/track-order`, `/api/SecurityAnswers` ...
+- **Anonymous visitors got 200 from admin-looking endpoints:**
+  ```
+  $ proxy2model cross-role juiceshop --low anon --high user
+  'anon' reached privileged-looking endpoints (2)
+    GET /rest/admin/application-configuration    ev_93  anon=[200] user=[200]
+      unknown: whether the low-role response was authorised or a leak · next: compare 'anon' and 'user' response bodies
+  ```
+- **The observed API as OpenAPI 3.0:** 68 paths, 88 operations, ready for Postman, ZAP or a fuzzer.
+
+Every line cites the request behind it (`ev_93`), and every lead says what is still unknown and the
+next safe check. Reproduce it: `for r in anon user accountant admin; do proxy2model samples/juiceshop-$r.xml -w juiceshop --role $r; done`.
+
 ## Install
 
 ```bash
@@ -31,8 +50,9 @@ proxy2model history.xml -w shop
 proxy2model serve -w shop
 proxy2model serve --caido-script | pbcopy    # paste into a Caido passive workflow (setup: docs/capture.md)
 
-# Ask it questions, with no AI
+# Ask it questions, with no AI, or let your AI agent ask (MCP)
 proxy2model query shop help
+proxy2model mcp --out "$PWD/proxy2model-out"   # see docs/ai.md
 ```
 
 `./demo.sh` builds the bundled sample. `proxy2model` on its own lists the everyday commands; `proxy2model <command> --help` explains each.
@@ -68,5 +88,5 @@ are authorized to test. CI plants fake secrets in the samples and fails if one r
 - [Crawling](docs/crawling.md): build from a running app, scripted journeys
 - [The model](docs/model.md): how it is built, layer by layer
 - [Querying](docs/querying.md): `query`, BQL, graph, diff
-- [Using it with AI](docs/ai.md)
+- [Using it with AI](docs/ai.md): the context package, and an MCP server for agents
 - [Skill](skill/): a no-install playbook for any capable AI
