@@ -6,7 +6,8 @@ Live ingest: a local HTTP listener a proxy pushes traffic to as it happens.
 
     {"request":  "<base64 raw HTTP request>",
      "response": "<base64 raw HTTP response>",      optional
-     "host": "shop.example.com", "port": 443, "tls": true}
+     "host": "shop.example.com", "port": 443, "tls": true,
+     "truncated": false}                             optional: the sender cut a body
 
 host, port and tls are optional when the request line or its Host header says them.
 Each exchange goes through the same parser and masking as an export: the raw bytes are
@@ -99,6 +100,8 @@ def item_from_payload(p) -> Element | None:
         SubElement(item, tag).text = val
     SubElement(item, "request", {"base64": "true"}).text = base64.b64encode(raw_rq).decode()
     SubElement(item, "response", {"base64": "true"}).text = base64.b64encode(raw_rs).decode()
+    if p.get("truncated") is True:              # the sender cut the body: say so in the model
+        SubElement(item, "truncated")
     return item
 
 
@@ -152,10 +155,14 @@ class Live:
         return len(batch)
 
 
-def make_handler(live: Live, token: str | None, loopback_only: bool, verbose: bool = False):
+def make_handler(live: Live, token: str | None, loopback_only: bool, verbose: bool = False,
+                 on_error=lambda msg: None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "proxy2model"
         sys_version = ""
+        # keep-alive: proxies reuse connections, and a send on one the server already closed
+        # can be lost without an error on their side (seen with Caido's workflow sender)
+        protocol_version = "HTTP/1.1"
 
         def log_message(self, fmt, *args):
             if verbose:
@@ -163,7 +170,11 @@ def make_handler(live: Live, token: str | None, loopback_only: bool, verbose: bo
 
         def _send(self, code: int, body: dict) -> None:
             data = json.dumps(body).encode()
+            if code >= 400:
+                self.close_connection = True        # an unread body must not leak into the next request
             self.send_response(code)
+            if code >= 400:
+                self.send_header("Connection", "close")
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -212,6 +223,9 @@ def make_handler(live: Live, token: str | None, loopback_only: bool, verbose: bo
                 body = json.loads(self.rfile.read(length))
             except ValueError:
                 return self._send(400, {"error": "body is not JSON"})
+            if isinstance(body, dict) and "script_error" in body:        # the sender's script failed
+                on_error(str(body["script_error"])[:2000])
+                return self._send(202, {"accepted": 0, "skipped": 0})
             payloads = body.get("items") if isinstance(body, dict) and "items" in body else [body]
             if not isinstance(payloads, list):
                 return self._send(400, {"error": "items must be a list"})
@@ -251,9 +265,11 @@ class Rebuilder(threading.Thread):
 
 def serve(live: Live, rebuild, bind: str = "127.0.0.1", port: int = 8765, token: str | None = None,
           interval: float = 5.0, verbose: bool = False, ready=None, report=print) -> None:
-    """Run until interrupted; saves and rebuilds once more on the way out."""
+    """Run until interrupted; saves and rebuilds once more on the way out. `report` also gets
+    {"script_error"} when a sender's script says it failed."""
     loopback = bind in ("127.0.0.1", "::1", "localhost")
-    httpd = ThreadingHTTPServer((bind, port), make_handler(live, token, loopback, verbose))
+    httpd = ThreadingHTTPServer((bind, port), make_handler(live, token, loopback, verbose,
+                                                          on_error=lambda msg: report({"script_error": msg})))
     httpd.daemon_threads = True
     worker = Rebuilder(live, rebuild, interval, report)
     worker.start()

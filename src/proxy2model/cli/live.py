@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import time
@@ -21,7 +22,8 @@ def caido_script(url: str, token: str | None) -> str:
     path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "caido-workflow.js")
     with open(path, encoding="utf-8") as f:
         js = f.read()
-    return js.replace("__INGEST_URL__", url).replace("__TOKEN__", token or "")
+    js = js.replace('const INGEST = "http://127.0.0.1:8765/ingest";', f"const INGEST = {json.dumps(url)};", 1)
+    return js.replace('const TOKEN = "";', f"const TOKEN = {json.dumps(token or '')};", 1)
 
 
 def cmd_serve(args) -> int:
@@ -68,6 +70,9 @@ def cmd_serve(args) -> int:
 
     def report(e: dict) -> None:
         stamp = ui.style(time.strftime("%H:%M:%S"), "dim")
+        if "script_error" in e:
+            print(f"  {stamp}  " + ui.warn("the proxy's script failed: " + e["script_error"].splitlines()[0]), flush=True)
+            return
         if "error" in e:
             print(f"  {stamp}  " + ui.error(f"rebuild failed: {e['error']}"), flush=True)
             return

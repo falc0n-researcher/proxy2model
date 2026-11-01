@@ -42,6 +42,9 @@ curl -s http://127.0.0.1:8765/ingest -H 'Content-Type: application/json' -d '{
 }'
 ```
 
+The script sends at most 64 KB of an ordinary body and 2 MB of a page or script, and marks what it cut.
+If it fails inside Caido, `serve` prints the error.
+
 `request` and `response` are base64 raw HTTP; `host`, `port` and `tls` are optional. Batches go
 as `{"items": [...]}`. Each exchange is masked on arrival and only the masked record is saved
 (`inputs/live.jsonl`), so a restart continues where it stopped. A session is one build in the history.

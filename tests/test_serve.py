@@ -1,6 +1,7 @@
 """`serve`: live traffic pushed over HTTP builds the same masked model as an export."""
 
 import base64
+import http.client
 import json
 import os
 import threading
@@ -40,6 +41,9 @@ def test_payload_to_item():
     item = item_from_payload({"target": "api.test:8080", "raw_data": b("GET http://api.test:8080/v1/a HTTP/1.1\r\n\r\n")})
     assert (item.find("host").text, item.find("port").text, item.find("protocol").text,
             item.find("path").text) == ("api.test", "8080", "http", "/v1/a")
+    # a sender that cut a body says so, and the model is told
+    assert item_from_payload({**pair("GET", "/a"), "truncated": True}).find("truncated") is not None
+    assert item_from_payload(pair("GET", "/a")).find("truncated") is None
     for junk in ({}, {"request": "not base64!"}, {"request": b("nonsense")}, [], "x"):
         assert item_from_payload(junk) is None
 
@@ -170,5 +174,34 @@ def test_token_required_when_set(tmp_path):
         assert post(port, pair("GET", "/a"), headers={"X-Proxy2model-Token": "s3cret"})[0] == 202
         assert post(port, pair("GET", "/a"), headers={"Authorization": "Bearer s3cret"})[0] == 202
     finally:
+        box["httpd"].shutdown()
+        t.join(10)
+
+
+def test_keep_alive_and_errors_close(tmp_path):
+    """A sender may reuse one connection; an error reply must not leave an unread body on it."""
+    live = Live(str(tmp_path / "live.jsonl"))
+    box, started = {}, threading.Event()
+
+    def ready(httpd):
+        box["httpd"] = httpd
+        started.set()
+    t = threading.Thread(target=live_serve.serve, args=(live, lambda: "ok"),
+                         kwargs={"port": 0, "interval": 0.2, "ready": ready, "report": lambda s: None}, daemon=True)
+    t.start()
+    assert started.wait(10)
+    conn = http.client.HTTPConnection("127.0.0.1", box["httpd"].server_address[1], timeout=10)
+    try:
+        for i in range(3):                       # three exchanges over one connection
+            conn.request("POST", "/ingest", json.dumps(pair("GET", f"/a/{i}")), {"Content-Type": "application/json"})
+            r = conn.getresponse()
+            assert r.status == 202 and r.getheader("Connection") != "close"
+            r.read()
+        conn.request("POST", "/ingest", "x" * 100, {"Content-Type": "text/plain"})
+        r = conn.getresponse()
+        assert r.status == 415 and r.getheader("Connection") == "close"
+        assert live.received == 3
+    finally:
+        conn.close()
         box["httpd"].shutdown()
         t.join(10)
