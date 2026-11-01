@@ -1,6 +1,6 @@
 // proxy2model: push Caido traffic to `proxy2model serve` as it happens.
 //
-// In Caido: Workflows -> Passive -> New workflow.
+// In Caido, with a project open: Workflows -> Passive -> New workflow.
 //   On Intercept Response  ->  In Scope  ->  Javascript (this code)
 // The In Scope node keeps the model to your target; drop it to send everything.
 //

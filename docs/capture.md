@@ -14,7 +14,7 @@ proxy2model history.xml -w shop
 
 Burp Community is enough. A **Logger++ CSV** works too (`--skip-tools Scanner` drops scanner rows).
 
-## HAR (browser, Caido, ZAP, mitmproxy, Hetty, Charles)
+## HAR (browser, ZAP, mitmproxy, Hetty, Charles)
 
 ```bash
 proxy2model session.har -w shop
@@ -22,18 +22,37 @@ proxy2model session.har -w shop
 
 In a browser: DevTools, Network, *Save all as HAR with content*. Requests that never got a response are skipped.
 
-## Live, from Caido or a script
+## Live from Caido
 
-`serve` keeps the model up to date while you browse: a proxy pushes each exchange to a local
-listener and the model, report and `openapi.json` rebuild a few seconds later.
+The model rebuilds a few seconds after each request you make in Caido. No exports.
 
-```bash
-proxy2model serve -w shop                 # listens on http://127.0.0.1:8765/ingest
-proxy2model serve --caido-script          # prints the Caido workflow script
-```
+1. Start the listener:
+   ```bash
+   proxy2model serve -w shop
+   ```
+2. Print the workflow script with `proxy2model serve --caido-script` and copy it
+   (`| pbcopy` on macOS). Add `--port` or `--token` if you use them; the script is filled in with both.
+3. In Caido, open a project, then **Workflows → Passive → New workflow**:
+   **On Intercept Response → In Scope → Javascript**. Paste the script into the Javascript node,
+   save, and make sure the workflow is enabled.
+4. Set your scope in Caido and browse. `serve` prints a line for each rebuild:
+   ```
+   23:41:53  +3  22 saved   1 host   6 routes   7 APIs   0.0s
+   ```
 
-In Caido, create a passive workflow **On Intercept Response → In Scope → Javascript** and paste
-the script into the Javascript node. Anything else can POST JSON:
+Without the In Scope node, everything Caido proxies is sent.
+
+**Nothing arrives?** Check that a Caido project is open (without one Caido proxies nothing), that
+the workflow is saved and enabled, and that `serve` is running. If the script fails inside Caido,
+`serve` prints its error.
+
+The script sends at most 64 KB of an ordinary body and 2 MB of a page or script (all proxy2model
+uses), and marks what it cut. Each exchange is masked on arrival and only the masked record is
+saved (`inputs/live.jsonl`), so a restart continues where it stopped. A session is one build in the history.
+
+## Live from a script
+
+Anything that can POST JSON can feed `serve`:
 
 ```bash
 curl -s http://127.0.0.1:8765/ingest -H 'Content-Type: application/json' -d '{
@@ -42,12 +61,8 @@ curl -s http://127.0.0.1:8765/ingest -H 'Content-Type: application/json' -d '{
 }'
 ```
 
-The script sends at most 64 KB of an ordinary body and 2 MB of a page or script, and marks what it cut.
-If it fails inside Caido, `serve` prints the error.
-
 `request` and `response` are base64 raw HTTP; `host`, `port` and `tls` are optional. Batches go
-as `{"items": [...]}`. Each exchange is masked on arrival and only the masked record is saved
-(`inputs/live.jsonl`), so a restart continues where it stopped. A session is one build in the history.
+as `{"items": [...]}`.
 
 The listener binds `127.0.0.1`, accepts only JSON with a loopback `Host` header, and needs
 `--token` to bind anything else.

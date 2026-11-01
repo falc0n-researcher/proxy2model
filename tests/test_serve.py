@@ -37,8 +37,8 @@ def test_payload_to_item():
     assert item.find("port").text == "443"
     assert item.find("protocol").text == "https"
     assert item.find("path").text == "/api/users/7?x=1"
-    # proxy-form request line, request-only sender (`target` + `raw_data`)
-    item = item_from_payload({"target": "api.test:8080", "raw_data": b("GET http://api.test:8080/v1/a HTTP/1.1\r\n\r\n")})
+    # proxy-form request line, no response
+    item = item_from_payload({"request": b("GET http://api.test:8080/v1/a HTTP/1.1\r\n\r\n")})
     assert (item.find("host").text, item.find("port").text, item.find("protocol").text,
             item.find("path").text) == ("api.test", "8080", "http", "/v1/a")
     # a sender that cut a body says so, and the model is told

@@ -62,7 +62,7 @@ def item_from_payload(p) -> Element | None:
     """One pushed exchange as the <item> element the parser reads, or None when it is not one."""
     if not isinstance(p, dict):
         return None
-    raw_rq = _b64(p.get("request")) or _b64(p.get("raw_data"))     # `raw_data`: request-only senders
+    raw_rq = _b64(p.get("request"))
     if not raw_rq:
         return None
     raw_rs = _b64(p.get("response")) or b""
@@ -74,15 +74,13 @@ def item_from_payload(p) -> Element | None:
 
     absolute = urllib.parse.urlsplit(target) if "://" in target else None
     tls = p.get("tls")
-    scheme = str(p.get("scheme") or "").lower()
-    if scheme not in ("http", "https"):
-        if isinstance(tls, bool):
-            scheme = "https" if tls else "http"
-        elif absolute is not None and absolute.scheme in ("http", "https"):
-            scheme = absolute.scheme
-        else:
-            scheme = "https"
-    netloc = str(p.get("host") or p.get("target") or "") or (absolute.netloc if absolute else "") or _host_header(raw_rq)
+    if isinstance(tls, bool):
+        scheme = "https" if tls else "http"
+    elif absolute is not None and absolute.scheme in ("http", "https"):
+        scheme = absolute.scheme
+    else:
+        scheme = "https"
+    netloc = str(p.get("host") or "") or (absolute.netloc if absolute else "") or _host_header(raw_rq)
     hp = urllib.parse.urlsplit("//" + netloc.split("@")[-1])
     host = (hp.hostname or "").lower()
     if not host:
