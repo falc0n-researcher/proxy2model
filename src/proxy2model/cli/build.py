@@ -188,7 +188,7 @@ def _summary(args, outdir: str, m, stats: dict, merged: list[str]) -> str:
             ("model.json", "the model and the request behind every claim"),
             ("openapi.json", "the observed API, OpenAPI 3.0"),
             ("context.json", "what to hand an AI instead of raw traffic"),
-            ("graph.db", f"query it: proxy2model q {args.webapp} help"),
+            ("graph.db", "the model as a SQLite graph"),
             (EXPORTS + "/", "graph.json · graph.graphml · build.svg"),
         ])),
         "",
