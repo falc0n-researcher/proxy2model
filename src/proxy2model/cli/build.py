@@ -166,18 +166,17 @@ def _summary(args, outdir: str, m, stats: dict, merged: list[str]) -> str:
     c = m.counts()
     st = c["api_state"]
     source = getattr(args, "log", None) or getattr(args, "url", None) or "saved inputs"
-    read = f"{source}  {ui.style('·', 'dim')}  {stats.get('parsed', 0)} requests"
-    if stats.get("skipped"):
-        read += f", {stats['skipped']} skipped (unparseable)"
     roles = [n for n in merged if n != DEFAULT_INPUT]
     lines = ["", ui.title("build", args.webapp), "",
-             ui.row("input", read)]
+             ui.row("input", str(source))]
     if roles:
-        lines.append(ui.row("roles", ", ".join(roles)))
+        lines.append(ui.row("roles", ", ".join(roles) + ui.style("  (merged into one model)", "dim")))
+    if stats.get("skipped"):
+        lines.append(ui.row("skipped", f"{stats['skipped']} unparseable items"))
     lines += [
         ui.row("scope", ", ".join(m.scope) or "none"),
         "",
-        ui.row("model", "   ".join([ui.stat(c["hosts"], "host"), ui.stat(c["routes"], "route"),
+        ui.row("model", "   ".join([ui.stat(stats.get("parsed", 0), "request"), ui.stat(c["hosts"], "host"), ui.stat(c["routes"], "route"),
                                     ui.stat(c["endpoints"], "API"), ui.stat(c["parameters"], "param"),
                                     ui.stat(c["unknowns"], "unknown")])),
         ui.row("APIs", f"{st.get('RUNTIME_ONLY', 0)} seen in traffic only · "

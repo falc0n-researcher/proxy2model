@@ -257,7 +257,7 @@ def _snapshot(conn: sqlite3.Connection, m: Model, osint_run: int | None, label: 
               replace: int | None = None) -> int:
     """Append this build's model to the history (or overwrite build `replace`); returns its build id."""
     raw = io.BytesIO()
-    with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as gz:
+    with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=6, mtime=0) as gz:   # 9 is 8x slower for 4% less
         for piece in dump_model(m):                 # piece by piece: the request log never exists as one string
             gz.write(piece.encode("utf-8"))
     blob = raw.getvalue()

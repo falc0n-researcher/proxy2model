@@ -242,6 +242,7 @@ class Rebuilder(threading.Thread):
         super().__init__(daemon=True)
         self.live, self.rebuild, self.interval, self.report = live, rebuild, interval, report
         self.stop = threading.Event()
+        self.last = 0.0                              # how long the last rebuild took
 
     def step(self) -> None:
         n = self.live.flush()
@@ -252,12 +253,15 @@ class Rebuilder(threading.Thread):
             summary = self.rebuild()
         except Exception as e:                      # a bad rebuild must not stop the listener
             self.report({"error": str(e)})
-            return
-        self.report({"added": n, "saved": self.live.saved, "summary": summary,
-                     "seconds": time.monotonic() - t0})
+        else:
+            self.report({"added": n, "saved": self.live.saved, "summary": summary,
+                         "seconds": time.monotonic() - t0})
+        self.last = time.monotonic() - t0
 
     def run(self) -> None:
-        while not self.stop.wait(self.interval):
+        # a big session rebuilds slowly: wait at least twice as long as the last rebuild took,
+        # so the listener never spends more than a third of its time rebuilding
+        while not self.stop.wait(max(self.interval, 2 * self.last)):
             self.step()
 
 
