@@ -25,50 +25,28 @@ from .live import (
 )
 
 
+# What a researcher reaches for every day; everything else is one line under "More".
 COMMANDS = [
-    ("Capture", [
-        ("build", "build the model from a Burp XML, Logger++ CSV or HAR export"),
-        ("serve", "keep the model up to date from live traffic (Caido, scripts)"),
-        ("crawl", "build the model by crawling a running app (authorized targets only)"),
-    ]),
-    ("Ask", [
-        ("query", "a factual question, answered from the model with no AI"),
-        ("q", "filter and walk graph.db with BQL"),
-        ("graph", "reason over the graph, or export GraphML / Cypher / JSON"),
-        ("gaps", "the open questions, ranked by how much each would tell you"),
-        ("cross-role", "what one role reached that another did not"),
-    ]),
-    ("Compare", [
-        ("builds", "the builds kept in graph.db"),
-        ("diff", "what changed between two builds"),
-        ("changes", "this model against an older model.json, by feature area"),
-        ("watch", "build each new export dropped in a folder"),
-    ]),
-    ("Export", [
-        ("openapi", "the observed API as OpenAPI 3.0"),
-        ("animate", "the build animation, in the terminal or as SVG"),
-    ]),
-    ("AI", [
-        ("methodology", "a target-specific hunting scaffold, or the prompt that writes one"),
-        ("falsify", "a prompt that tries to knock down the scaffold's hypotheses"),
-    ]),
-    ("Recon", [
-        ("osint", "DNS, TLS, headers and tech for a host (authorized targets only)"),
-    ]),
+    ("build", "build the model from a Burp XML, Logger++ CSV or HAR export"),
+    ("serve", "keep the model up to date from live traffic (Caido, scripts)"),
+    ("crawl", "build the model by crawling a running app (authorized targets only)"),
+    ("query", "ask the model a question, answered with evidence and no AI"),
+    ("diff", "what changed between two builds"),
+    ("openapi", "print the observed API as OpenAPI 3.0"),
 ]
+MORE = ["cross-role", "builds", "watch", "q", "graph", "gaps", "changes",
+        "methodology", "falsify", "osint", "animate"]
 
 
 def overview() -> str:
-    """The top-level help: commands grouped by what they are for."""
-    w = max(len(c) for _, cmds in COMMANDS for c, _ in cmds)
+    """The top-level help: the everyday commands, then the rest on one line."""
+    w = max(len(c) for c, _ in COMMANDS)
     out = [ui.title(__version__), "Captured proxy traffic in, an evidence-backed model of the web app out.", "",
            f"{ui.style('usage', 'dim')}  proxy2model <command> [options]",
            f"       proxy2model FILE ...     {ui.style('same as build FILE', 'dim')}", ""]
-    for group, cmds in COMMANDS:
-        out.append(ui.style(group, "bold"))
-        out += [f"  {c.ljust(w)}   {d}" for c, d in cmds]
-        out.append("")
-    out.append(ui.style("proxy2model <command> --help shows its options.", "dim"))
+    out += [f"  {c.ljust(w)}   {d}" for c, d in COMMANDS]
+    out += ["", f"  {ui.style('More:', 'dim')} {', '.join(MORE)}", "",
+            ui.style("proxy2model <command> --help shows what a command does and its options.", "dim")]
     return "\n".join(out)
 
 
@@ -79,7 +57,14 @@ def main(argv=None) -> int:
     )
     p.add_argument("--version", action="version", version=f"proxy2model {__version__}")
     p.set_defaults(func=None)
-    sub = p.add_subparsers(dest="cmd", metavar="<command>")
+    subparsers = p.add_subparsers(dest="cmd", metavar="<command>")
+
+    class _Sub:                             # every command's --help opens with what it does
+        @staticmethod
+        def add_parser(name, **kw):
+            kw.setdefault("description", kw.get("help"))
+            return subparsers.add_parser(name, **kw)
+    sub = _Sub()
 
     b = sub.add_parser("build", help="build the model (also the default: `proxy2model file.xml`)")
     b.add_argument("log", help="Burp 'Save items' XML, Logger++ CSV or HAR export to build from")

@@ -35,7 +35,7 @@ proxy2model serve --caido-script | pbcopy    # paste into a Caido passive workfl
 proxy2model query shop help
 ```
 
-`./demo.sh` builds the bundled sample. `proxy2model` on its own lists every command.
+`./demo.sh` builds the bundled sample. `proxy2model` on its own lists the everyday commands; `proxy2model <command> --help` explains each.
 
 ## Output
 
