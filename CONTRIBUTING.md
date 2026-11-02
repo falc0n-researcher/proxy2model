@@ -13,7 +13,7 @@ pytest -q                      # about two minutes; the UI tests use Chrome if i
 
 ```
 src/proxy2model/
-├── ingest/   exports, live pushes and crawls: parse, mask, infer value types
+├── ingest/   exports, browser recording and crawls: parse, mask, infer value types
 ├── core/     the model: build, graph reasoning, context for AI, diffs
 ├── db/       graph.db and the BQL query language
 ├── report/   the HTML report, animation, screenshots

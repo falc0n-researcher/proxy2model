@@ -48,7 +48,7 @@
       <span class="eyebrow"><span class="dot"></span> 2.0 · open source</span>
       <h1>Your proxy history already <span class="hl">describes the app.</span></h1>
       <p class="lede">
-<code>proxy2model</code> turns traffic you already captured into an <b>evidence-backed model</b> of a web app: hosts, pages, scripts, endpoints, parameters and the gaps in what you saw. Every node cites a real request. Secrets are masked before anything is written.
+<code>proxy2model</code> turns the traffic you capture (a Burp or HAR export, or a browser it records while you use the app) into an <b>evidence-backed model</b> of a web app: hosts, pages, scripts, endpoints, parameters and the gaps in what you saw. Every node cites a real request. Secrets are masked before anything is written.
       </p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/falc0n-researcher/proxy2model#quickstart">
@@ -71,7 +71,7 @@
         <div><b>0</b>runtime deps</div>
         <div><b>6</b>layers</div>
         <div><b>0</b>secrets written</div>
-        <div><b>424</b>tests passing</div>
+        <div><b>440</b>tests passing</div>
       </div>
     </div>
     <div class="term" role="img" aria-label="A terminal building a model from two Burp exports and running a cross-role comparison">
@@ -145,7 +145,7 @@
       <table>
         <thead><tr><th>It does</th><th>It never</th></tr></thead>
         <tbody>
-          <tr><td>read a capture <b>you</b> exported</td><td>replay it or send it anywhere</td></tr>
+          <tr><td>read traffic <b>you</b> captured</td><td>replay it or send it anywhere</td></tr>
           <tr><td>mask every value before the first write</td><td>store a token, cookie, key or personal value</td></tr>
                     <tr><td>say what it <b>couldn't</b> observe</td><td>claim coverage it didn't have</td></tr>
           <tr><td>list hypotheses with their evidence</td><td>call anything a vulnerability</td></tr>

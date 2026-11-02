@@ -1,9 +1,9 @@
 # How proxy2model works
 
-Traffic goes in, a model comes out. Parsing, redaction, modelling and querying are offline. The network is used only by `crawl` and `osint` (and `build --osint`). `PROXY2MODEL_OFFLINE=1` forces recon off.
+Traffic goes in, a model comes out. Parsing, redaction, modelling and querying are offline. Only `crawl`, `browse --active` and `osint` (and `build --osint`) send requests of their own. `PROXY2MODEL_OFFLINE=1` forces recon off.
 
 ```
-export, live push or crawl  ->  parse  ->  redact  ->  model  ->  six-layer graph
+export, browse or crawl  ->  parse  ->  redact  ->  model  ->  six-layer graph
                                                               |-- graph.db   (SQLite, queried with BQL)
                                                               |-- report.html
                                                               |-- context.json  (for an AI)
@@ -12,7 +12,7 @@ export, live push or crawl  ->  parse  ->  redact  ->  model  ->  six-layer grap
 
 ## 1. Parse
 
-The parser streams the XML, decodes the base64 items, splits headers from bodies and undoes gzip/deflate. Paths are templated (`/api/users/123` becomes `/api/users/{id}`) so one endpoint is one node. Items that cannot be parsed are counted and reported as the `CAPTURE_ITEMS_SKIPPED` unknown.
+The parser streams the export one item at a time (Burp XML, Logger++ CSV and HAR alike), decodes base64, splits headers from bodies and undoes gzip/deflate. Paths are templated (`/api/users/123` becomes `/api/users/{id}`) so one endpoint is one node. Items that cannot be parsed are counted and reported as the `CAPTURE_ITEMS_SKIPPED` unknown.
 
 From each body (up to 10 MB; larger scripts raise `SCRIPT_PARTIALLY_SCANNED`) it extracts:
 
@@ -86,7 +86,7 @@ The model names its gaps. Absence in the model means absence in the capture, not
 
 ## 7. Roles and evidence
 
-Each `--role` build saves redacted records to `inputs/<role>.jsonl`, then rebuilds one model from all saved roles. Rebuilding a role replaces only that role. A build without `--role`, or with `--fresh`, starts over.
+Each `--role` build saves masked records to `inputs/<role>.jsonl` (`browse` saves to `inputs/browse.jsonl`), then rebuilds one model from everything saved. Rebuilding a role replaces only that role. A build without `--role`, or with `--fresh`, starts over.
 
 Every claim cites an evidence id (`ev_1`, `ev_2`, ... numbered from 1). The report shows the same ids as EVD 1, EVD 2. The `evidence` table in `model.json` maps each id to its source file and item. Ids are renumbered when roles merge, so treat the outputs of one build as one set and re-copy after a rebuild.
 
@@ -102,6 +102,6 @@ Every claim cites an evidence id (`ev_1`, `ev_2`, ... numbered from 1). The repo
 
 `proxy2model osint <host> --yes` contacts the target and public services (DNS, TLS, HTTP headers, certificate transparency, RDAP). `build --osint` runs a light version on the primary public host and carries on if it fails. A plain `build` never does. Results are saved to `graph.db` as `EXTERNAL` nodes, kept apart from captured traffic.
 
-## 10. Crawling
+## 10. Crawling and browsing
 
-`proxy2model crawl URL --yes` builds the same model from a running app. Its traffic passes through the same parser and redaction. See [crawling.md](crawling.md).
+`crawl` and `browse` record traffic themselves; it passes through the same parser and redaction as an export. See [crawling.md](crawling.md) and [capture.md](capture.md#your-own-browser).

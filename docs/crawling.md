@@ -56,4 +56,5 @@ Steps: `goto` `click` `fill` `press` `wait` `wait_for` `wait_idle` `request` `se
 
 ## What to expect
 
-On a local Juice Shop, a browser crawl reached about 70 endpoints in about 900 requests per role. A hand-driven capture reached 105. For state-changing flows, record a real session and build from the export. See [TESTED_APPS.md](TESTED_APPS.md).
+A crawler reaches what it can click and what the scripts name. Sign-ups, checkouts and other
+state-changing flows need a journey or a real session (`browse`, or an export).

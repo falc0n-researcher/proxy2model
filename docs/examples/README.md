@@ -9,7 +9,7 @@ The capture is 417 requests in four sessions (anonymous, a new user, accounting,
 
 What the model recovered:
 
-- 105 API endpoints: 48 seen in code and traffic, 42 in traffic only, 15 named only in the Angular bundle and never called.
+- 104 API endpoints: 47 seen in code and traffic, 41 in traffic only, 16 named only in the Angular bundle and never called.
 - Feature areas, and for each one what the capture could not answer.
 - Role differences: a normal user got `200` on `/api/Users/`, and anonymous visitors reached `/rest/admin/application-configuration`.
 - Redaction: the sessions contain real JWTs, a throwaway login and a test card number. None appears in the report.

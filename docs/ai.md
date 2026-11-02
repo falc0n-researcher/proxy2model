@@ -59,4 +59,4 @@ The package is provider-agnostic. Paste it into any chat model or give the file 
 
 ## Size
 
-The package grows with the app's structure, not its bytes: about 6k tokens for the 17-request sample (no saving), 37k for a 417-request Juice Shop capture (about 28x smaller than the raw traffic). It is capped, and its coverage section says what was cut.
+The package grows with the app's structure, not its bytes: about 6k tokens for the 17-request sample, about 37k for the 417-request Juice Shop capture (2.6 MB of raw traffic). It is capped, and its coverage section says what was cut.

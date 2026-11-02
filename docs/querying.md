@@ -5,9 +5,12 @@
 ```
 $ proxy2model query shop "code vs runtime"
 APIs: 10 endpoints
-  BOTH 6 · STATIC_ONLY 1 · RUNTIME_ONLY 3
+  BOTH         6
+  STATIC_ONLY  1
+  RUNTIME_ONLY 3
     static-only  * /api/admin/audit  ev_4
-Source: model graph · Model call: none
+
+Source: Knowledge Graph · Model call: none
 ```
 
 Every line cites the request behind it. `*` means the code names the path but not the method.
@@ -18,7 +21,7 @@ Every line cites the request behind it. `*` means the code names the path but no
 | `reconcile` | code vs runtime |
 | `list-routes` | pages, SPA states, forms |
 | `route-apis /x` | APIs a route calls |
-| `provenance /api/orders` | where an endpoint was seen |
+| `provenance /api/checkout` | where an endpoint was seen |
 | `third-parties` | off-scope hosts |
 | `auth-surface` | credentials, roles, cookie flags |
 | `unknowns` | what the capture could not answer |
@@ -46,10 +49,8 @@ Fields are `req.*`, `resp.*`, `node.*`, `edge.*`. Operators: `eq ne cont ncont l
 
 ## Graph reach
 
-```
-$ proxy2model graph shop --reach /api/checkout
-  api.example.com --EXPOSES--> POST /api/checkout              ev_15
-  cdn.example.com/app.js --REFERENCES(inferred)--> POST /api/checkout  ev_9
+```bash
+proxy2model graph shop --reach /api/checkout     # entry point -> ... -> the endpoint, as JSON
 ```
 
 - `--reach NODE`: how a node is reached from an entry point.
@@ -71,18 +72,20 @@ proxy2model methodology shop [--prompt]             # target-specific plan, or t
 
 ### What changed between builds
 
-Every build is kept in `graph.db`. `diff` compares two of them by deterministic id:
+Every build is kept in `graph.db`. `diff` compares two of them (by default the last two). Abridged, from the two bundled samples:
 
 ```
-shop: build 1 (2026-10-01) → build 2 (2026-10-08)
-  1 new workflow(s) · 2 new · 2 changed · 3 gone
+shop: build 1 (2026-11-02) → build 2 (2026-11-02)
+  1 new workflow(s) · 3 new · 4 changed · 7 gone · 4 removed workflow(s)
 
 NEW WORKFLOWS (connected additions, one line each)
-  ▸ route /checkout  (5 things: 1 script, 1 endpoint, 2 parameters)
-      /checkout → checkout.js → POST /api/pay → +2 parameters
+  ▸ route shop.example.com/admin  (4 things: 1 endpoint, 2 parameters)
+      shop.example.com/admin → POST /api/admin/users → +2 parameters
+
 CHANGED
-  ~ GET /api/admin/users  [endpoint]      statuses 200 → 403
-  ~ www.shop.test  [host]                 header server: nginx/1.24.0 → cloudflare
+  ~ GET /api/admin/users  [endpoint]
+      statuses 403 → 200
+      ev_3
 ```
 
 A new page, the script it loads, the endpoint that script names and its parameters are one line, not a dozen. The same build twice gives no drift. In BQL, `node.first_build` and `node.last_build` (also `first_seen`, `last_seen`) say when a thing first and last appeared. Set `PROXY2MODEL_KEEP_BUILDS=N` to keep only the newest N builds.
