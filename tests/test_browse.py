@@ -63,12 +63,16 @@ def session(base, tmp_path, monkeypatch, *flags, drive=None):
         ["browse", base + "/", "--yes", "--headless", "-w", "spa", "--scope", "127.0.0.1",
          "--interval", "0.5", "--out", out, *flags])), daemon=True)
     t.start()
-    for _ in range(100):
-        if "ws" in box:
-            break
+    # a cold Chrome on a busy CI runner can take most of launch_chrome's own 20 s per attempt
+    deadline = time.time() + 60
+    while "ws" not in box and t.is_alive() and time.time() < deadline:
         time.sleep(0.1)
+    assert "ws" in box, "browse did not launch Chrome within 60 s"
     user = CDP(WebSocket(box["ws"]))
-    time.sleep(2)
+    deadline = time.time() + 30                                   # the first page has loaded and called its API
+    while not any(e["p"] == "/api/items" for e in App.log) and time.time() < deadline:
+        time.sleep(0.1)
+    time.sleep(1)
     if drive:
         drive(user)
     user.call("Browser.close")
