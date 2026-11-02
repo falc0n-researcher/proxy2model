@@ -73,7 +73,7 @@ proxy2model mcp --out "$PWD/proxy2model-out"   # or let an AI agent ask (docs/ai
 
 ```
 proxy2model-out/shop/
-├── report.html     interactive report: overview, map, every request, query console
+├── report.html     interactive report: overview, what to check, endpoints, map, every request, query console
 ├── model.json      the model, and the request behind every claim
 ├── openapi.json    the observed API, OpenAPI 3.0
 ├── context.json    what to hand an AI instead of raw traffic

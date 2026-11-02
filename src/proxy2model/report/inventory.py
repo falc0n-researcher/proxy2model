@@ -133,7 +133,7 @@ function invApplyQuery(v){
 function vEvidence(){
   const meths=tally(EVL,e=>e.method||"?").map(x=>x[0]).slice(0,8);
   const roles=[...new Set(EVL.map(e=>e.role).filter(Boolean))].sort();
-  return `<div class="inv" id="inv"><div class="inv-bar"><h1>Inventory</h1>
+  return `<div class="inv" id="inv"><div class="inv-bar"><h1>Requests</h1>
    <div class="inv-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="invq" spellcheck="false" autocomplete="off" placeholder="${BQLDB?"filter: text, or BQL e.g. req.method:POST AND resp.code.gte:400":"filter by method, URL, status, role"}" value="${esc(INV.q)}"></div>
    <div class="inv-chips" id="invchips">${meths.map(m=>`<button class="ichip${INV.methods.has(m)?" on":""}" data-m="${esc(m)}">${esc(m)}</button>`).join("")}

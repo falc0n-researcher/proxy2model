@@ -69,6 +69,10 @@ DASH_CSS = r"""
 .abtn{font:600 12px var(--sans);padding:6px 11px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--muted);white-space:nowrap}
 .abtn:hover{color:var(--text);border-color:var(--faint)}
 .abtn.pri{background:var(--text);color:var(--ink);border-color:var(--text)}
+.lead .eps{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.lead .eps button{display:flex;gap:8px;align-items:center;border:0;background:none;padding:4px 6px;margin:0 -6px;border-radius:6px;text-align:left;font:600 12.5px var(--mono);color:var(--text);word-break:break-all}
+.lead .eps button:hover{background:var(--panel2);color:var(--signal)}
+.lead .eps .more{font:12px var(--sans);color:var(--faint);padding:2px 0}
 @media(max-width:700px){.lead{grid-template-columns:24px minmax(0,1fr)}.lead .acts{grid-column:2;flex-direction:row}}
 .side{display:flex;flex-direction:column;gap:14px}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
@@ -257,9 +261,9 @@ function vMore(){
    <div class="dc"><div class="h">Code vs runtime <span class="ct">${eptot} endpoints</span></div><div class="b">
     <div class="dwrap">${donut([{v:both,color:"var(--ok)",label:"seen in code and traffic"},{v:rt,color:"var(--observed)",label:"traffic only"},{v:so,color:"var(--signal)",label:"code only"}],150,20,String(eptot),"ENDPOINTS")}
      <div class="dleg">
-      <div class="r" data-goto="surface"><span class="sw" style="background:var(--ok)"></span><span class="l">Code + traffic</span><b>${both}</b><span class="pc">${pct(both,eptot)}</span></div>
-      <div class="r" data-goto="surface"><span class="sw" style="background:var(--observed)"></span><span class="l">Traffic only</span><b>${rt}</b><span class="pc">${pct(rt,eptot)}</span></div>
-      <div class="r" data-goto="surface"><span class="sw" style="background:var(--signal)"></span><span class="l">Code only</span><b>${so}</b><span class="pc">${pct(so,eptot)}</span></div></div></div>
+      <div class="r" data-goto="endpoints" data-seen="both"><span class="sw" style="background:var(--ok)"></span><span class="l">Code + traffic</span><b>${both}</b><span class="pc">${pct(both,eptot)}</span></div>
+      <div class="r" data-goto="endpoints" data-seen="traffic"><span class="sw" style="background:var(--observed)"></span><span class="l">Traffic only</span><b>${rt}</b><span class="pc">${pct(rt,eptot)}</span></div>
+      <div class="r" data-goto="endpoints" data-seen="code"><span class="sw" style="background:var(--signal)"></span><span class="l">Code only</span><b>${so}</b><span class="pc">${pct(so,eptot)}</span></div></div></div>
     <div class="dnote">Code only = named in the client code but never called in this capture.</div></div></div>
 
    <div class="dc"><div class="h">Traffic shape <span class="ct">${fmtN(reqTot)} requests</span></div><div class="b">
@@ -283,7 +287,7 @@ function vMore(){
   <div class="dgrid dg2">
    <div class="dc"><div class="h">Start here <button class="lnk" data-goto="priorities">All ${PRIO.length} →</button></div><div class="b dlist">
     ${PRIO.slice(0,6).map((p,i)=>{const e=p.ep,l=p.sig[0];return `<div class="it" data-ep="${esc(e.id)}" style="--c:${p.sev==="hot"?"var(--signal)":p.sev==="warn"?"var(--warn)":"var(--observed)"}"><span class="rk">${i+1}</span><div class="tx"><div class="tt">${methodm(e.method)}<span class="p">${esc(e.path)}</span></div><div class="ds">${esc(l.ttl)}${p.sig.length>1?` · +${p.sig.length-1} more`:""}</div></div></div>`;}).join("")||'<div class="empty">Nothing stands out.</div>'}</div></div>
-   <div class="dc"><div class="h">Busiest endpoints <button class="lnk" data-goto="surface">All →</button></div><div class="b">
+   <div class="dc"><div class="h">Busiest endpoints <button class="lnk" data-goto="endpoints">All →</button></div><div class="b">
     ${topEp.length?hbars(topEp.map(e=>({label:(e.method!=="*"?e.method+" ":"")+e.path,v:e.requests,attr:`data-ep="${esc(e.id)}"`,color:e.state==="STATIC_ONLY"?"var(--signal)":"var(--observed)"}))):'<div class="empty">No endpoint was requested.</div>'}</div></div>
   </div>
 
@@ -376,6 +380,15 @@ function glance(){
   return `<div class="band${shot?" shot":""}">${shot}${a}${b}</div>`;
 }
 
+/* several leads with the same reason: the reason once, then each endpoint as a link */
+function leadGroupCard(g,i){
+  const col=g.sev==="hot"?"var(--signal)":g.sev==="warn"?"var(--warn)":"var(--observed)",max=6;
+  return `<div class="lead" style="--c:${col}"><span class="num">${i+1}</span><div>
+    <div class="w" style="margin-top:0">${esc(g.lead.ttl)} <span style="color:var(--faint);font:600 12px var(--mono)">${g.items.length} endpoints</span></div>
+    <div class="y">${esc(g.lead.why)}</div><div class="nx"><b>Do next</b>${esc(g.lead.next)}</div>
+    <div class="eps">${g.items.slice(0,max).map(([p])=>`<button data-open-ep="${esc(p.ep.id)}">${methodm(p.ep.method)}<span>${esc(p.ep.path)}</span></button>`).join("")}${g.items.length>max?`<span class="more">+ ${g.items.length-max} more on the To check page</span>`:""}</div></div>
+    <div class="acts"><button class="abtn pri" data-goto="priorities">See all</button></div></div>`;
+}
 function leadCard(p,i){
   const e=p.ep,l=p.sig[0],col=p.sev==="hot"?"var(--signal)":p.sev==="warn"?"var(--warn)":"var(--observed)";
   return `<div class="lead" style="--c:${col}"><span class="num">${i+1}</span><div>
@@ -389,14 +402,14 @@ function vOverview(){
   const hot=PRIO.filter(p=>p.sev==="hot").length,roles=D.roles||[],reqTot=EVL.length;
   const sum=[`<b>${c.endpoints||0}</b> API endpoints on <b>${c.routes||0}</b> pages, from <b>${fmtN(reqTot)}</b> captured requests${roles.length>1?` as <b>${roles.length}</b> roles`:""}.`];
   if(so)sum.push(`<b>${so}</b> ${so===1?"endpoint is":"endpoints are"} named in the code but never called.`);
-  sum.push(PRIO.length?`Start with the ${Math.min(5,PRIO.length)===1?"lead":Math.min(5,PRIO.length)+" leads"} below.`:"Nothing stands out. The map is the next stop.");
+  sum.push(PRIO.length?"Start with what is below.":"Nothing stands out. The map is the next stop.");
   const stc=tally(EVL,e=>statusClass(e.status));
   const stOrder=["2xx","3xx","4xx","5xx"].map(k=>({label:k,v:(stc.find(x=>x[0]===k)||[0,0])[1],color:SC_COL[k]}));
   const unk=c.unknowns||0;
   return `<div class="ovh"><div><h1>${esc(D.app)}</h1><p class="sum">${sum.join(" ")}</p>
     <div class="meta">scope ${esc((D.scope||[]).join(", ")||"none")} · ${esc(D.generated||"")}</div></div>
    <div class="big4">
-    <button data-goto="surface"><div class="n">${c.endpoints||0}</div><div class="k">API endpoints</div></button>
+    <button data-goto="endpoints"><div class="n">${c.endpoints||0}</div><div class="k">API endpoints</div></button>
     <button data-goto="inventory"><div class="n">${fmtN(reqTot)}</div><div class="k">Requests</div></button>
     <button class="${hot||weakCookies.length?"hot":""}" data-goto="priorities"><div class="n">${PRIO.length+weakCookies.length}</div><div class="k">To check</div></button>
     <button data-goto="unknowns"><div class="n">${unk}</div><div class="k">Open questions</div></button></div></div>
@@ -406,12 +419,12 @@ function vOverview(){
 
   <div class="ovg"><div>
     <div class="sech"><h2>Check these first</h2><span class="s">ranked leads to verify, not findings</span>${PRIO.length+weakCookies.length>5?`<button class="lnk" data-goto="priorities">All ${PRIO.length+weakCookies.length} →</button>`:""}</div>
-    ${PRIO.slice(0,5).map(leadCard).join("")||'<div class="dc"><div class="b"><div class="empty">Nothing stands out in this capture.</div></div></div>'}
+    ${leadGroups(PRIO.map((p,i)=>[p,i]),p=>p.sig[0],p=>p.sev).slice(0,4).map((g,i)=>g.items.length<2?leadCard(g.items[0][0],i):leadGroupCard(g,i)).join("")||'<div class="dc"><div class="b"><div class="empty">Nothing stands out in this capture.</div></div></div>'}
    </div><div class="side">
     <div class="dc"><div class="h">What the code names vs what ran</div><div class="b"><div class="dwrap">${donut([{v:both,color:"var(--ok)",label:"in code and traffic"},{v:rt,color:"var(--observed)",label:"traffic only"},{v:so,color:"var(--signal)",label:"code only"}],130,18,String(eptot),"ENDPOINTS")}
-      <div class="dleg"><div class="r" data-goto="surface"><span class="sw" style="background:var(--ok)"></span><span class="l">Both</span><b>${both}</b></div>
-       <div class="r" data-goto="surface"><span class="sw" style="background:var(--observed)"></span><span class="l">Traffic only</span><b>${rt}</b></div>
-       <div class="r" data-goto="surface"><span class="sw" style="background:var(--signal)"></span><span class="l">Code only</span><b>${so}</b></div></div></div></div></div>
+      <div class="dleg"><div class="r" data-goto="endpoints" data-seen="both"><span class="sw" style="background:var(--ok)"></span><span class="l">Both</span><b>${both}</b></div>
+       <div class="r" data-goto="endpoints" data-seen="traffic"><span class="sw" style="background:var(--observed)"></span><span class="l">Traffic only</span><b>${rt}</b></div>
+       <div class="r" data-goto="endpoints" data-seen="code"><span class="sw" style="background:var(--signal)"></span><span class="l">Code only</span><b>${so}</b></div></div></div></div></div>
     <div class="dc"><div class="h">Responses</div><div class="b">${stacked(stOrder)}</div></div>
     ${roles.length>1?`<div class="dc"><div class="h">Roles in this capture</div><div class="b"><div class="dtags">${roles.map(r=>`<span class="dtag"><b>${esc(r)}</b></span>`).join("")}</div><div class="dnote"><a href="#crossrole" data-goto="crossrole">See what each role reached →</a></div></div></div>`:""}
    </div></div>
@@ -426,7 +439,8 @@ function vOverview(){
   <details class="more"><summary>More numbers <span>timeline, busiest endpoints, third parties, hosts</span></summary><div class="inner">${vMore()}</div></details>`;
 }
 function initOverview(){
-  $$("[data-open-ep]").forEach(b=>b.onclick=e=>{e.stopPropagation();REF.focusId="endpoints";REF.pickId="ep:"+b.dataset.openEp;REF.rowId=b.dataset.openEp;REF.q="";view="reference";render();});
+  $$("[data-open-ep]").forEach(b=>b.onclick=e=>{e.stopPropagation();EPV.sel=b.dataset.openEp;EPV.q="";EPV.seen="all";view="endpoints";render();});
+  $$("[data-seen]").forEach(b=>b.onclick=e=>{e.stopPropagation();EPV.seen=b.dataset.seen;EPV.q="";EPV.sel=null;view="endpoints";render();});
   $$("[data-ev]",$("#main")).forEach(b=>b.onclick=e=>{e.stopPropagation();openEv(b.dataset.ev);});
   const sh=$("[data-shot]");
   if(sh)sh.onclick=()=>{const d=document.createElement("div");d.className="lightbox";d.innerHTML=`<img src="${esc(D.screenshot)}" alt="Screenshot">`;d.onclick=()=>d.remove();document.body.append(d);};

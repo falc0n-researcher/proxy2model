@@ -16,7 +16,7 @@ from proxy2model.cli import main
 pytestmark = pytest.mark.skipif(find_chrome() is None, reason="no Chrome/Chromium installed")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VIEWS = ["overview", "priorities", "graph", "inventory", "ask", "reference",
+VIEWS = ["overview", "priorities", "endpoints", "graph", "inventory", "ask", "reference",
          "surface", "code", "supply", "trust", "crossrole", "unknowns", "infra"]       # the last ones are old links
 
 
@@ -174,8 +174,51 @@ def test_old_section_links_open_the_reference(page):
     page.js("location.hash='#code'", wait=0.6)
     assert "Scripts" in page.js("document.querySelector('#reft').textContent")
     page.js("location.hash='#surface'", wait=0.6)
-    assert "Endpoints" in page.js("document.querySelector('#reft').textContent")
+    assert page.js("document.querySelector('.vt').textContent") == "Endpoints"   # the API table has its own page now
     assert page.errors == []
+
+
+def test_the_address_bar_uses_the_names_the_nav_shows(page):
+    for name, title in (("map", None), ("requests", "Requests"), ("check", "To check"), ("endpoints", "Endpoints")):
+        page.js("location.hash='#overview'", wait=0.3)
+        page.js(f"location.hash='#{name}'", wait=0.6)
+        assert page.js("location.hash") == "#" + name
+        assert page.js("document.querySelector('#nav .vbtn.on').textContent").startswith(title or "Map")
+    assert page.errors == []
+
+
+def test_endpoints_page_lists_the_api_and_filters(page):
+    page.js("location.hash='#endpoints'", wait=0.6)
+    rows = page.js("document.querySelectorAll('tr[data-eprow]').length")
+    assert rows == page.js("EP.length") and rows > 3
+    assert page.js("document.querySelectorAll('#spbot .rrp').length") == 2      # the first row's request, below
+    chip = page.js("[...document.querySelectorAll('[data-epseen]')].map(b=>b.dataset.epseen).find(k=>k!=='all')")
+    page.js(f"document.querySelector('[data-epseen={chip}]').click()", wait=0.3)
+    assert 0 < page.js("document.querySelectorAll('tr[data-eprow]').length") < rows
+    assert page.js("methodm('*')").count("ANY") == 1                             # a method never seen is not shown as *
+    page.js("document.querySelector('[data-epseen=all]').click()", wait=0.3)
+    page.js("(()=>{const i=document.querySelector('#epq');i.value='zzz-nothing';i.dispatchEvent(new Event('input'));})()")
+    assert page.js("document.querySelectorAll('tr[data-eprow]').length") == 0
+    page.js("(()=>{const i=document.querySelector('#epq');i.value='';i.dispatchEvent(new Event('input'));})()")
+    page.js("document.querySelector('[data-epd]').click()", wait=0.3)
+    assert page.js("document.querySelector('#drawer').classList.contains('on')")
+    page.js("document.querySelector('#dclose').click()")
+    assert page.errors == []
+
+
+def test_leads_with_one_reason_are_explained_once(page):
+    page.js("location.hash='#check'", wait=0.6)
+    groups = page.js("[...document.querySelectorAll('.lgrp')].map(g=>g.querySelectorAll('[data-lead]').length)")
+    for n in groups:
+        assert n >= 2
+    assert page.js("[...document.querySelectorAll('.lgrp')].every(g=>g.querySelectorAll('.y').length===1)")   # the reason once
+    assert page.errors == []
+
+
+def test_numbers_in_code_stay_on_their_line(page):
+    """The Requests tree styles .tn as a row; the code viewer must not pick that up for its numbers."""
+    html = page.js("hlJS('r(9950);')")
+    assert "tnum" in html and 'class="tn"' not in html
 
 
 def test_scripts_are_beautified_for_reading(page):

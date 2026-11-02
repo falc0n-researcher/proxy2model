@@ -469,6 +469,7 @@ border:1px solid currentColor;white-space:nowrap}
 .p-get{color:var(--muted)}.p-post,.p-put,.p-patch,.p-delete{color:var(--signal)}
 .m{font:600 11px var(--mono);padding:2px 7px;border-radius:6px;background:var(--panel2);color:var(--muted)}
 .m.w{color:var(--signal);background:var(--signal-soft)}
+.m.any{color:var(--faint);background:none;border:1px dashed var(--line2);cursor:help}
 .st{font:600 11px var(--mono);padding:1px 6px;border-radius:5px;background:var(--panel2)}
 .st.g{color:var(--ok)}.st.r{color:var(--bad)}.st.y{color:var(--warn)}
 .chipwrap{display:flex;flex-wrap:wrap;gap:6px}
@@ -739,6 +740,7 @@ const hasRoles=(D.roles||[]).length>=2;
 const VIEWS=[
   {id:"overview",name:"Overview",grp:"Start here",ct:()=>null},
   {id:"priorities",name:"To check",grp:"Start here",ct:()=>PRIO.length+weakCookies.length},
+  {id:"endpoints",name:"Endpoints",grp:"Start here",ct:()=>EP.length},
   {id:"graph",name:"Map",grp:"Start here",ct:()=>null},
   {id:"inventory",name:"Requests",grp:"Start here",ct:()=>EVL.length},
   {id:"ask",name:"Ask",grp:"Start here",ct:()=>null},
@@ -758,7 +760,8 @@ function renderNav(){
 }
 
 /* ---------- shared renderers ---------- */
-function methodm(m){return `<span class="m ${m&&m!=='GET'&&m!=='*'?'w':''}">${esc(m||"*")}</span>`;}
+/* "*" is an endpoint named in code: the method was never seen, so say so */
+function methodm(m){if(!m||m==="*")return '<span class="m any" title="Named in the code; no request was captured, so the method is not known">ANY</span>';return `<span class="m ${m!=='GET'?'w':''}">${esc(m)}</span>`;}
 function statuses(ss){if(!ss||!ss.length)return '<span class="st">—</span>';return ss.map(s=>{const cls=s>=500?"r":s>=400?"y":s>=200&&s<300?"g":"";return `<span class="st ${cls}">${s}</span>`;}).join(" ");}
 function matchQ(e){if(!query)return true;const q=query.toLowerCase();return (e.label+" "+(e.host||"")+" "+(e.params||[]).join(" ")+" "+(e.referenced_by||[]).join(" ")).toLowerCase().includes(q);}
 
@@ -930,10 +933,13 @@ $("#scrim").onclick=closeDrawer;$("#dclose").onclick=closeDrawer;
 addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
 
 /* ---------- wire ---------- */
-const RENDER={overview:vOverview,priorities:vPriorities,graph:vGraph,inventory:vEvidence,ask:vAsk,reference:vReference};
+const RENDER={overview:vOverview,priorities:vPriorities,endpoints:vEndpoints,graph:vGraph,inventory:vEvidence,ask:vAsk,reference:vReference};
+/* the address bar uses the names the nav shows: report.html#map, #requests, #check */
+const HASH_OF={graph:"map",inventory:"requests",priorities:"check"};
+const VIEW_OF=Object.fromEntries(Object.entries(HASH_OF).map(([a,b])=>[b,a]));
 function render(){
   renderNav();
-  try{if(!(view==="ask"&&(location.hash||"").startsWith("#query=")))history.replaceState(null,"","#"+view);}catch(e){}
+  try{if(!(view==="ask"&&(location.hash||"").startsWith("#query=")))history.replaceState(null,"","#"+(HASH_OF[view]||view));}catch(e){}
   const main=$("#main");
   main.className="m-"+view;
   main.innerHTML=`<section class="view view-${view} on">${(RENDER[view]||vOverview)()}</section>
@@ -942,6 +948,7 @@ function render(){
   if(view==="ask")initAsk();
   if(view==="overview")initOverview();
   if(view==="priorities")initPriorities();
+  if(view==="endpoints")initEndpoints();
   if(view==="reference")initReference();
   if(view==="inventory")initEvq();
   // row / card clicks → drawer
@@ -954,7 +961,7 @@ function render(){
 $("#q").addEventListener("input",e=>{query=e.target.value.trim();
   // a search jumps to the most relevant list view if on a summary view
   // on the Map, a search highlights matching nodes in place instead
-  REF.q=query;if(query&&["overview","ask","priorities"].includes(view))go("surface");
+  REF.q=query;EPV.q=query;if(query&&["overview","ask","priorities"].includes(view))go("endpoints");
   render();});
 addEventListener("keydown",e=>{
   if(e.key==="/"&&!e.metaKey&&!e.ctrlKey&&!/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)){e.preventDefault();$("#q").focus();}
@@ -967,6 +974,7 @@ function fromHash(){
   if(h==="evidence"){view="inventory";return true;}
   if(h==="query"){view="ask";return true;}
   if(LEGACY[h]){go(h);return true;}
+  if(VIEW_OF[h]){view=VIEW_OF[h];return true;}
   if(RENDER[h]){view=h;return true;}
   return false;
 }

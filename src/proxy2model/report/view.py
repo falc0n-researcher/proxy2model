@@ -31,7 +31,7 @@ RR_CSS = r"""
 .rrp .code .l::before{counter-increment:l;content:counter(l);position:absolute;left:0;width:40px;text-align:right;color:var(--faint);font-size:11px;user-select:none}
 .rrp .code.nol .l{padding-left:12px}.rrp .code.nol .l::before{display:none}
 .rrp .ln{color:var(--signal);font-weight:700}.rrp .hn{color:var(--observed)}.rrp .hv{color:var(--text)}.rrp .rd{color:var(--inferred);font-weight:700}
-.rrp .tk{color:var(--signal);font-weight:600}.rrp .ts{color:var(--ok)}.rrp .tc{color:var(--faint);font-style:italic}.rrp .tn{color:var(--warn)}.rrp .tg{color:var(--observed)}.rrp .ta{color:var(--inferred)}
+.rrp .tk{color:var(--signal);font-weight:600}.rrp .ts{color:var(--ok)}.rrp .tc{color:var(--faint);font-style:italic}.rrp .tnum{color:var(--warn)}.rrp .tg{color:var(--observed)}.rrp .ta{color:var(--inferred)}
 .rrp .jk{color:var(--observed)}.rrp .js{color:var(--ok)}.rrp .jn{color:var(--warn)}.rrp .jb{color:var(--inferred)}
 .rrp .note{color:var(--faint);font-style:italic}
 .rrp .gap{height:8px}
@@ -128,7 +128,7 @@ function hlJS(text){
     if(m[1])out+=`<span class="tc">${esc(m[1])}</span>`;
     else if(m[2])out+=`<span class="ts">${esc(m[2])}</span>`;
     else if(m[3])out+=JS_KW.test(m[3])?`<span class="tk">${m[3]}</span>`:esc(m[3]);
-    else out+=`<span class="tn">${esc(m[4])}</span>`;
+    else out+=`<span class="tnum">${esc(m[4])}</span>`;
   }
   return out+esc(text.slice(last));
 }

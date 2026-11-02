@@ -7,9 +7,9 @@ app in layers: click a ring of the chart and the table below lists what is in it
 
 PG_CSS = r"""
 /* split pages: content on top, viewer below */
-.m-priorities,.m-reference,.m-ask{padding:0!important;overflow:hidden!important}
-.m-priorities .view,.m-reference .view,.m-ask .view{max-width:none;height:100%}
-.m-priorities .foot,.m-reference .foot,.m-ask .foot{display:none}
+.m-priorities,.m-endpoints,.m-reference,.m-ask{padding:0!important;overflow:hidden!important}
+.m-priorities .view,.m-endpoints .view,.m-reference .view,.m-ask .view{max-width:none;height:100%}
+.m-priorities .foot,.m-endpoints .foot,.m-reference .foot,.m-ask .foot{display:none}
 .splitpg{display:flex;flex-direction:column;height:100%;min-height:0}
 .splitpg .top{flex:1 1 auto;min-height:140px;overflow:auto;padding:24px 32px 28px}
 .splitpg .gut{height:4px;flex:none;background:var(--line);cursor:row-resize;position:relative;z-index:2}
@@ -45,7 +45,39 @@ PG_CSS = r"""
 .lrow .nx b{font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--c);margin-right:6px}
 .lrow .more{color:var(--faint);font-size:12px;margin-top:4px}
 .sev-hot{--c:var(--signal)}.sev-warn{--c:var(--warn)}.sev-info{--c:var(--observed)}
+/* leads that share one reason: the reason once, then the endpoints */
+.lgrp{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:13px 16px 8px;margin-bottom:12px}
+.lgrp .lgh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lgrp .lgh b{font:600 14px var(--sans)}
+.lgrp .lgh .n{font:600 11px var(--mono);color:var(--faint)}
+.lgrp .y{color:var(--muted);font-size:12.5px;margin-top:4px;max-width:90ch}
+.lgrp .nx{font-size:12.5px;margin:6px 0 8px}
+.lgrp .nx b{font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--c);margin-right:6px}
+.lgrp .sevb,.qgh .sevb{font:700 9.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:5px;padding:1px 6px}
+.lrow.c{grid-template-columns:28px minmax(0,1fr);border:0;border-top:1px solid var(--line);border-radius:0;margin:0 -16px 0 -16px;padding:8px 16px 8px 12px;background:none}
+.lrow.c:hover{background:var(--panel2)}
+.lrow.c.sel{background:var(--signal-soft);box-shadow:inset 3px 0 var(--c)}
+.lrow.c .rk{font-size:12px;padding-top:0}
+.lrow.c .more{margin:0 0 0 6px;display:inline}
+/* endpoints table */
+.epscroll{overflow-x:auto;border-radius:12px}
+.eptab th.srt{cursor:pointer;user-select:none}
+.eptab th.srt:hover,.eptab th.srt.on{color:var(--text)}
+.eptab .sm{font-size:11px;margin-top:2px}
+.eptab .sevb{font:700 9.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--c);border:1px solid var(--c);border-radius:5px;padding:1px 6px;white-space:nowrap}
+.seen{font:600 11px var(--mono);padding:2px 7px;border-radius:6px;white-space:nowrap}
+.seen.s-traffic{color:var(--observed);background:var(--panel2)}
+.seen.s-both{color:var(--ok);background:var(--panel2)}
+.seen.s-code{color:var(--signal);border:1px dashed var(--signal)}
+.dhead .fchips+input{margin-left:auto}
 /* open questions */
+.qgh{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:4px 0 10px}
+.qgh .un{color:var(--l6);font-size:12.5px}
+.qgh .nx{margin-top:6px;font-size:12.5px}
+.qgh .nx b{font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--l6);margin-right:6px}
+.qgh .tip{margin-top:8px;font-size:12.5px;color:var(--text)}
+.qrow.c{padding:8px 14px;margin-bottom:6px}
+.qrow.c ul{margin-top:3px}
 .qgrp{margin:18px 0 8px;font:700 13px var(--display,var(--sans));display:flex;gap:8px;align-items:baseline}
 .qgrp .n{font:600 11px var(--mono);color:var(--faint)}
 .qrow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:8px;cursor:pointer}
@@ -123,7 +155,7 @@ function highlightIn(el,text){
   if(!text)return;
   const lines=[...el.querySelectorAll(".rrp:last-child .code .l")];
   const hit=lines.find(l=>l.textContent.includes(text));
-  if(!hit){const t=$(".rrt",el);if(t&&!$(".rrnote",el))t.insertAdjacentHTML("afterend",`<span class="rrnote">${esc(text)} is further into this script than the report keeps</span>`);return;}
+  if(!hit){const t=$(".rrt",el);if(t&&!$(".rrnote",el))t.insertAdjacentHTML("afterend",`<span class="rrnote">named past the first 40 KB of this script, which is all the report keeps; search the script itself for ${esc(text)}</span>`);return;}
   hit.classList.add("hit");
   const box=hit.closest(".code");if(box)box.scrollTop=Math.max(0,hit.offsetTop-box.clientHeight/3);
 }
@@ -142,7 +174,7 @@ function splitInit(){
     g.onpointerup=()=>{g.classList.remove("drag");g.onpointermove=g.onpointerup=null;try{localStorage.setItem("b2m-split",String(SPL.h));}catch(e){}};};
 }
 /* old section names keep working as links */
-const LEGACY={surface:["reference","endpoints"],code:["reference","scripts"],supply:["reference","parties"],trust:["reference","trust"],
+const LEGACY={surface:["endpoints"],code:["reference","scripts"],supply:["reference","parties"],trust:["reference","trust"],
   crossrole:["reference","roles"],infra:["reference","infra"],unknowns:["priorities","open"],changes:["priorities","changes"],query:["ask"],evidence:["inventory"]};
 function go(id){
   const l=LEGACY[id];
@@ -164,7 +196,7 @@ function evForLabel(label){
 /* ---------- TO CHECK: leads and open questions in one place ---------- */
 const CHK={tab:"leads",sev:"all",type:"all",sel:null};
 function chkLeads(){
-  const items=PRIO.map(p=>({sev:p.sev,ep:p.ep,lead:p.sig[0],more:p.sig.slice(1),ids:p.ep.evidence||[],find:p.ep.state==="STATIC_ONLY"?p.ep.path:null,title:p.ep.method+" "+p.ep.path}));
+  const items=PRIO.map(p=>({sev:p.sev,ep:p.ep,lead:p.sig[0],more:p.sig.slice(1),ids:p.ep.evidence||[],find:p.ep.state==="STATIC_ONLY"?p.ep.path:null,title:epTitle(p.ep)}));
   weakCookies.forEach(k=>{const miss=[!k.httponly&&"HttpOnly",!k.secure&&"Secure"].filter(Boolean);
     items.push({sev:"warn",cookie:k,lead:{ttl:`Cookie set without ${miss.join(" and ")}`,why:`SameSite is ${k.samesite||"unset"}. A cookie without ${miss.join(" or ")} is easier to steal or use cross-site.`,next:"Confirm whether this cookie carries a session or auth state."},more:[],ids:k.evidence||[],title:"cookie "+k.name});});
   return items;
@@ -187,7 +219,21 @@ function chkLeadsHtml(leads){
   const cnt=s=>leads.filter(x=>x.sev===s).length;
   const shown=leads.map((x,i)=>[x,i]).filter(([x])=>CHK.sev==="all"||x.sev===CHK.sev);
   return `<div class="fchips">${[["all","All",leads.length],["hot","High",cnt("hot")],["warn","Medium",cnt("warn")],["info","Note",cnt("info")]].filter(c=>c[2]||c[0]==="all").map(([k,l,n])=>`<button class="fchip${CHK.sev===k?" on":""}" data-csev="${k}">${l}<span class="n">${n}</span></button>`).join("")}</div>
-   <div id="leadlist">${shown.map(([x,i])=>chkLeadRow(x,i)).join("")||'<div class="empty">None at this level.</div>'}</div>`;
+   <div id="leadlist">${leadGroups(shown,x=>x.lead,x=>x.sev).map(g=>g.items.length<2?chkLeadRow(g.items[0][0],g.items[0][1])
+     :`<div class="lgrp sev-${g.sev}"><div class="lgh"><span class="sevb">${{hot:"High",warn:"Medium",info:"Note"}[g.sev]}</span><b>${esc(g.lead.ttl)}</b><span class="n">${g.items.length}</span></div>
+       <div class="y">${esc(g.lead.why)}</div><div class="nx"><b>Do next</b>${esc(g.lead.next)}</div>
+       ${g.items.map(([x,i])=>chkLeadRowC(x,i)).join("")}</div>`).join("")||'<div class="empty">None at this level.</div>'}</div>`;
+}
+/* consecutive leads with the same reason and severity, so one explanation covers them all */
+function leadGroups(pairs,leadOf,sevOf){
+  const out=[];
+  pairs.forEach(pr=>{const l=leadOf(pr[0]),s=sevOf(pr[0]),last=out[out.length-1];
+    if(last&&last.lead.ttl===l.ttl&&last.lead.why===l.why&&last.sev===s)last.items.push(pr);else out.push({lead:l,sev:s,items:[pr]});});
+  return out;
+}
+function chkLeadRowC(it,i){
+  const e=it.ep;
+  return `<div class="lrow c sev-${it.sev}${CHK.sel===i?" sel":""}" data-lead="${i}"><div class="rk">${i+1}</div><div><div class="t">${e?methodm(e.method)+`<span class="p">${esc(e.path)}</span>`:`<span class="p">cookie ${esc(it.cookie.name)}</span>`}${it.more.length?`<span class="more">+ ${it.more.map(s=>esc(s.ttl)).join(" · ")}</span>`:""}</div></div></div>`;
 }
 function chkOpenHtml(open){
   if(!open.length)return '<div class="empty">Nothing was left open in this capture.</div>';
@@ -195,8 +241,22 @@ function chkOpenHtml(open){
   const shown=open.map((u,i)=>[u,i]).filter(([u])=>CHK.type==="all"||u.type===CHK.type);
   const groups=new Map();shown.forEach(([u,i])=>{(groups.get(u.type)||groups.set(u.type,[]).get(u.type)).push([u,i]);});
   return `<div class="fchips"><button class="fchip${CHK.type==="all"?" on":""}" data-ctype="all">All<span class="n">${open.length}</span></button>${types.map(([k,n])=>`<button class="fchip${CHK.type===k?" on":""}" data-ctype="${esc(k)}">${esc(openTitle(k))}<span class="n">${n}</span></button>`).join("")}</div>
-   <div id="openlist">${[...groups.entries()].map(([k,xs])=>`<div class="qgrp">${esc(openTitle(k))}<span class="n">${xs.length}</span></div>${xs.slice(0,60).map(([u,i])=>`<div class="qrow${CHK.sel===i?" sel":""}" data-open="${i}"><div class="e">${esc(u.entity)}</div>
-     <ul>${u.we_know.map(x=>`<li>${esc(x)}</li>`).join("")}<li class="un">Unknown: ${esc(u.we_dont_know)}</li></ul><div class="nx"><b>To find out</b>${esc(u.next)}</div></div>`).join("")}${xs.length>60?`<div class="more" style="color:var(--faint);font-size:12px">+ ${xs.length-60} more of this kind</div>`:""}`).join("")}</div>`;
+   <div id="openlist">${[...groups.entries()].map(([k,xs])=>{
+     /* when every question of a kind has the same unknown and the same next step, say it once */
+     const same=xs.length>1&&xs.every(([u])=>u.we_dont_know===xs[0][0].we_dont_know&&u.next===xs[0][0].next);
+     const tip=openTip(k,xs.length);
+     const head=same||tip?`<div class="qgh">${same?`<div class="un">Unknown for each: ${esc(xs[0][0].we_dont_know)}</div><div class="nx"><b>To find out</b>${esc(xs[0][0].next)}</div>`:""}${tip?`<div class="tip">${tip}</div>`:""}</div>`:"";
+     return `<div class="qgrp">${esc(openTitle(k))}<span class="n">${xs.length}</span></div>${head}${xs.slice(0,60).map(([u,i])=>`<div class="qrow${same?" c":""}${CHK.sel===i?" sel":""}" data-open="${i}"><div class="e">${esc(u.entity)}</div>
+     <ul>${u.we_know.map(x=>`<li>${esc(x)}</li>`).join("")}${same?"":`<li class="un">Unknown: ${esc(u.we_dont_know)}</li>`}</ul>${same?"":`<div class="nx"><b>To find out</b>${esc(u.next)}</div>`}</div>`).join("")}${xs.length>60?`<div class="more" style="color:var(--faint);font-size:12px">+ ${xs.length-60} more of this kind</div>`:""}`;}).join("")}</div>`;
+}
+/* the one move that answers a whole group of questions at once */
+function openTip(type,n){
+  const roles=D.roles||[];
+  if(type==="AUTHORIZATION_UNKNOWN"&&roles.length<2)
+    return `<b>One capture answers all ${n}:</b> only ${roles.length?`the <span class="mono">${esc(roles[0])}</span> role is`:"one session is"} in this capture. Record a second account with <span class="mono">proxy2model browse</span> (it asks for a role), and the report compares what each role reached.`;
+  if(type==="API_PURPOSE_UNKNOWN"&&n>1)
+    return `Use the app's features that would call these while recording, or request them in an authorised session.`;
+  return "";
 }
 /* what moved since the previous build: workflows, changed fingerprints, new and gone */
 const hasChanges=()=>!!(D.changes&&!D.changes.same);
@@ -234,6 +294,58 @@ function initPriorities(){
   pick("data-open",open,u=>{const ids=evForLabel(u.entity);splitShow(ids,{title:u.entity,empty:{head:"Nothing to open",text:"This question is about something the capture does not contain, so there is no request to show."}});});
   const first=CHK.tab==="leads"?$("[data-lead]"):CHK.tab==="changes"?$("[data-chg]"):$("[data-open]");
   if(first)first.click();
+}
+
+/* ---------- ENDPOINTS: the API in one table ---------- */
+/* an endpoint only named in code has no method; its title is just the path on its host */
+const epTitle=e=>(e.method&&e.method!=="*"?e.method+" ":"")+(e.host||"")+e.path;
+const EPV={q:"",seen:"all",sort:"path",dir:1,sel:null};
+const LEAD_OF=new Map(PRIO.map(p=>[p.ep.id,p]));
+const SEEN={BOTH:["both","code + traffic"],RUNTIME_ONLY:["traffic","traffic only"],STATIC_ONLY:["code","code only"]};
+const seenOf=e=>(SEEN[e.state]||["traffic","traffic only"])[0];
+function epRows(){
+  const q=EPV.q.toLowerCase();
+  const sev=e=>{const p=LEAD_OF.get(e.id);return p?SEV_RANK[p.sev]:9;};
+  const key={path:e=>e.path+" "+e.method,requests:e=>-e.requests,params:e=>-e.params.length,status:e=>(e.statuses[0]||999),lead:e=>sev(e)}[EPV.sort]||(e=>e.path);
+  return EP.filter(e=>(EPV.seen==="all"||(EPV.seen==="lead"?LEAD_OF.has(e.id):EPV.seen==="admin"?e.privileged:seenOf(e)===EPV.seen))
+      &&(!q||(e.label+" "+(e.host||"")+" "+e.params.join(" ")+" "+e.roles.join(" ")).toLowerCase().includes(q)))
+    .sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*EPV.dir||a.path.localeCompare(b.path);});
+}
+function epTableHtml(){
+  const rows=epRows(),hosts=new Set(EP.map(e=>e.host)).size>1;
+  const th=(k,l)=>k?`<th data-epsort="${k}" class="srt${EPV.sort===k?" on":""}">${l}${EPV.sort===k?(EPV.dir>0?" ↑":" ↓"):""}</th>`:`<th>${l}</th>`;
+  const sevb=p=>p?`<span class="sevb sev-${p.sev}" title="${esc(p.sig[0].ttl)}">${{hot:"High",warn:"Medium",info:"Note"}[p.sev]}</span>`:"";
+  return `<div class="epscroll"><table class="dtable eptab"><thead><tr>${th("","")}${th("path","Endpoint")}${th("","Seen")}${th("status","Status")}${th("params","Params")}${th("","Credential")}${th("","Roles")}${th("requests","Requests")}${th("lead","To check")}${th("","")}</tr></thead><tbody>${
+    rows.slice(0,600).map(e=>`<tr data-eprow="${esc(e.id)}" class="${EPV.sel===e.id?"sel":""}"><td>${methodm(e.method)}</td>
+      <td><span class="mono">${esc(e.path)}</span>${e.privileged?' <span class="m w">admin</span>':""}${hosts?`<div class="dim mono sm">${esc(e.host||"")}</div>`:""}</td>
+      <td><span class="seen s-${seenOf(e)}">${esc((SEEN[e.state]||SEEN.RUNTIME_ONLY)[1])}</span></td><td>${statuses(e.statuses)}</td>
+      <td class="dim">${e.params.length||""}</td><td class="dim mono">${e.credentials.length?esc(e.credentials.join(", ")):e.requests?'<span title="No credential seen on any request">none seen</span>':""}</td>
+      <td class="dim mono">${esc(e.roles.join(", "))}</td><td class="dim">${e.requests||""}</td><td>${sevb(LEAD_OF.get(e.id))}</td>
+      <td><button class="rrbtn" data-epd="${esc(e.id)}">Details</button></td></tr>`).join("")
+    ||`<tr><td colspan="10"><div class="empty">No endpoint matches.</div></td></tr>`}</tbody></table></div>${rows.length>600?`<div class="dnote">Showing the first 600 of ${rows.length}. Filter to narrow.</div>`:""}`;
+}
+function vEndpoints(){
+  const n=k=>EP.filter(e=>seenOf(e)===k).length,leads=EP.filter(e=>LEAD_OF.has(e.id)).length,adm=EP.filter(e=>e.privileged).length;
+  const chips=[["all","All",EP.length],["traffic","Traffic only",n("traffic")],["both","Code + traffic",n("both")],["code","Code only",n("code")],["lead","To check",leads],["admin","Admin-looking",adm]]
+    .filter(c=>c[2]||c[0]==="all").map(([k,l,c])=>`<button class="fchip${EPV.seen===k?" on":""}" data-epseen="${k}">${l}<span class="n">${c}</span></button>`).join("");
+  return splitShell(`<h1 class="vt">Endpoints</h1><p class="vsub">The API this capture shows. <b>Traffic</b> means a request was captured; <b>code only</b> means a script names it but nothing called it. Pick a row to see its request below; <b>Details</b> shows parameters, roles and where it is named.</p>
+   <div class="dhead"><div class="fchips" style="margin:0">${chips}</div><input id="epq" placeholder="filter endpoints" title="Matches path, host, parameter names and roles" value="${esc(EPV.q)}"></div>
+   <div id="eptable">${epTableHtml()}</div>`);
+}
+function initEndpoints(){
+  splitInit();
+  const show=id=>{const e=EP.find(x=>x.id===id);if(!e)return;EPV.sel=id;
+    $$("tr[data-eprow]").forEach(r=>r.classList.toggle("sel",r.dataset.eprow===id));
+    splitShow(e.evidence,{title:epTitle(e),find:e.state==="STATIC_ONLY"?e.path:null,empty:{head:"Not requested",text:"The code names this endpoint but nothing in the capture called it."}});};
+  const wire=()=>{
+    $$("tr[data-eprow]").forEach(r=>r.onclick=()=>show(r.dataset.eprow));
+    $$("[data-epd]").forEach(b=>b.onclick=ev=>{ev.stopPropagation();openEp(b.dataset.epd);});
+    $$("[data-epsort]").forEach(t=>t.onclick=()=>{const k=t.dataset.epsort;if(EPV.sort===k)EPV.dir*=-1;else{EPV.sort=k;EPV.dir=1;}redraw();});
+  };
+  const redraw=()=>{$("#eptable").innerHTML=epTableHtml();wire();const r=$("tr.sel[data-eprow]")||$("tr[data-eprow]");if(r){show(r.dataset.eprow);r.scrollIntoView({block:"nearest"});}else splitShow([]);};
+  $$("[data-epseen]").forEach(b=>b.onclick=()=>{EPV.seen=b.dataset.epseen;EPV.sel=null;render();});
+  const qi=$("#epq");qi.oninput=()=>{EPV.q=qi.value;EPV.sel=null;redraw();};
+  redraw();
 }
 
 /* ---------- REFERENCE: the app in layers ---------- */

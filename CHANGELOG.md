@@ -15,6 +15,12 @@ proxy2model is the new name of burp2model. Its history up to 1.3.0 is in
   stylesheets, records WebSocket handshakes, and ends with the code-only endpoints to visit next.
 - **Caido exports.** A Caido HTTP history export (JSON or CSV) builds like a Burp export; its
   `source` filters with `--skip-tools` / `--only-tools`. `watch` also picks up `*.json`.
+- **Report.** An **Endpoints** page lists the whole API in one sortable table (seen in traffic or
+  only in code, status, parameters, credential, roles, leads) with the request below. Leads that
+  share a reason, and open questions that share an unknown, say it once. With one role captured,
+  the access-control questions point to the one capture that answers them. Links use the names the
+  nav shows (`#map`, `#requests`, `#check`, `#endpoints`). An endpoint named only in code shows
+  `ANY`, not `*`. Numbers in beautified code stay on their line, and To check opens at once.
 - **MCP server.** `mcp` serves built models to an AI agent (Claude Code, Claude Desktop, Cursor ...)
   with the same cited answers as the CLI. Read-only.
 - **OpenAPI.** Every build writes `openapi.json`, with response schemas read from JSON bodies;
