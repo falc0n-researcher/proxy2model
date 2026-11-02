@@ -49,7 +49,7 @@ class Recorder(threading.Thread):
             while not self.stop.is_set():
                 ev = self.cdp.next_event(0.2)
                 if ev is not None:
-                    self._handle(ev)
+                    self._on_event(ev)
                 if self.done and time.monotonic() - last > 0.5:
                     self._emit()
                     last = time.monotonic()
@@ -77,7 +77,7 @@ class Recorder(threading.Thread):
         except (RuntimeError, TimeoutError):
             return {}
 
-    def _handle(self, ev: dict) -> None:
+    def _on_event(self, ev: dict) -> None:
         m, p, sid = ev["method"], ev.get("params", {}), ev.get("sessionId")
         if m == "Target.attachedToTarget":
             child, kind = p["sessionId"], p["targetInfo"].get("type")
