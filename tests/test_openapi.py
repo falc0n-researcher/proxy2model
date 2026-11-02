@@ -165,3 +165,16 @@ def test_a_variable_base_url_is_not_pinned_to_the_page_host(tmp_path):
     assert eps["POST {base}/v1/accounts:signInWithPassword"] == "{base}"
     assert eps["* /api/orders"] == "www.shop.test"
     assert all("{base}" not in p for p in to_openapi(m, include_static=True)["paths"])
+
+
+def test_a_manifest_is_a_static_file_and_the_given_host_is_primary(tmp_path):
+    p = tmp_path / "t.har"
+    p.write_text(json.dumps({"log": {"version": "1.2", "entries": [
+        entry("GET", "https://cms.shop.test/api/a", 200), entry("GET", "https://cms.shop.test/api/b", 200),
+        entry("GET", "https://shop.test/manifest.json", 200), entry("GET", "https://shop.test/api/c", 200)]}}))
+    ex = list(parse_items(str(p)))
+    m = build(ex, name="t", seed_host="shop.test")
+    labels = {n.label for n in m.nodes.values() if n.type == "endpoint"}
+    assert labels == {"GET /api/c", "GET cms.shop.test/api/a", "GET cms.shop.test/api/b"}
+    fallback = {n.label for n in build(ex, name="t", seed_host="nowhere.test").nodes.values() if n.type == "endpoint"}
+    assert "GET shop.test/api/c" in fallback                        # an unseen host: the busiest is primary

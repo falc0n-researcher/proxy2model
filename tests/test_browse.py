@@ -101,6 +101,7 @@ def test_passive_records_every_tab_the_user_opens(base, tmp_path, monkeypatch, c
     assert {"/api/items", "/api/more", "/api/about"} <= {r["path"] for r in recorded}
     assert sum(r["path"] == "/" and r["method"] == "GET" for r in recorded) == 2
     assert "/logo.png" not in {r["path"] for r in recorded}          # images are not recorded
+    assert sum(r["path"] == "/app.js" for r in recorded) == 1         # both tabs loaded it; recorded once
     assert any(r["path"] == "/ws" and r["status"] == 101 for r in recorded)   # the WebSocket handshake
     assert any(n["type"] == "endpoint" and n["label"].endswith("/ws") for n in model["nodes"])
     out = capsys.readouterr().out

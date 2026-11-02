@@ -135,6 +135,7 @@ def cmd_browse(args) -> int:
     scope = _scope_list(args.scope)
     args.scope = [s[2:] if s.startswith("*.") else s for s in scope]      # first-party, for the model
     start_host = (urllib.parse.urlsplit(args.url).hostname or "").lower()
+    args.seed_host = start_host           # the site you opened is the app's main host, not the busiest one
     if not in_scope(args.url, scope):
         scope.append(start_host)
 
@@ -228,7 +229,8 @@ def cmd_browse(args) -> int:
     if not live.saved:
         print(f"\n  nothing in scope was recorded ({', '.join(scope)})")
         return 1
-    extras = [f"{recorder.assets_skipped} images, fonts and stylesheets not recorded"]
+    extras = [f"{recorder.assets_skipped} images, fonts and stylesheets and "
+              f"{recorder.repeats_skipped} repeat script and preflight loads not recorded"]
     if recorder.frames:
         extras.append(f"{recorder.frames} WebSocket messages (handshakes recorded, messages not)")
     print(f"\n  done · {recorder.recorded} requests recorded this session, {live.saved} saved in all · "

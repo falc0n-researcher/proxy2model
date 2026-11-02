@@ -39,6 +39,8 @@ class Recorder(threading.Thread):
         self.done: list[_Rec] = []
         self.recorded = 0
         self.assets_skipped = 0
+        self.seen_once: set[tuple] = set()
+        self.repeats_skipped = 0
         self.sockets: dict[tuple[str, str], _Rec] = {}     # WebSocket handshakes being recorded
         self.frames = 0
         self.error: str | None = None
@@ -116,6 +118,14 @@ class Recorder(threading.Thread):
             if p.get("type") in _SKIPPED:
                 self.assets_skipped += 1
                 return
+            # with the cache off, every page load fetches each script and CORS preflight again;
+            # the first copy says all the later ones would
+            if p.get("type") == "Script" or p["request"].get("method") == "OPTIONS":
+                once = (p["request"].get("method"), p["request"].get("url"))
+                if once in self.seen_once:
+                    self.repeats_skipped += 1
+                    return
+                self.seen_once.add(once)
             rec = _Rec(key[1])
             rec.req, rec.rtype = p["request"], p.get("type", "")
             rec.post = rec.req.get("postData")

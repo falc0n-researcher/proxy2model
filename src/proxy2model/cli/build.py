@@ -103,7 +103,8 @@ def _write_outputs(args, outdir: str, replace_build: int | None = None, quiet: b
     rebuild with `quiet` and the build to overwrite; the build id and counts are left on `args`."""
     all_ex, all_stats, merged = _load_inputs(outdir)
 
-    m = build(all_ex, name=args.webapp, scope=_scope(args), stats=all_stats)
+    m = build(all_ex, name=args.webapp, seed_host=getattr(args, "seed_host", None), scope=_scope(args),
+              stats=all_stats)
     all_ex.clear()                      # the model holds what it needs; keeps peak memory down
     if m.counts()["hosts"] == 0 and not quiet:
         print(ui.warn(f"no captured host matched the scope ({', '.join(m.scope) or 'none'}); every "

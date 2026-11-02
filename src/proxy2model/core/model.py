@@ -39,6 +39,8 @@ TELEMETRY_RE = re.compile(
 STATIC_EXT_RE = re.compile(
     r"\.(?:png|jpe?g|gif|svg|ico|webp|avif|bmp|css|woff2?|ttf|otf|eot|map|mp4|webm|"
     r"mp3|wav|pdf|zip)$", re.I)
+# a web app manifest is JSON, but a static file the browser reads, not an API
+MANIFEST_RE = re.compile(r"(?:^|/)(?:manifest\.json|[^/]*\.webmanifest)$", re.I)
 _PLACEHOLDER_RE = re.compile(r"\{[^/{}]*\}")
 
 
@@ -234,7 +236,7 @@ def _is_html(ex: Exchange) -> bool:
 
 def _is_static_asset(ex: Exchange) -> bool:
     m = ex.mime.lower()
-    return (bool(STATIC_EXT_RE.search(ex.path_template))
+    return (bool(STATIC_EXT_RE.search(ex.path_template)) or bool(MANIFEST_RE.search(ex.path_template))
             or m in ("css", "image", "gif", "jpeg", "png", "svg", "font", "woff", "woff2", "ico"))
 
 
@@ -401,6 +403,8 @@ def build(exchanges: list[Exchange], name: str, seed_host: str | None = None,
         for n, ex in enumerate(exchanges):
             ex.index = n + 1
     m.stats["slug_templates_folded"] = collapse_siblings(exchanges)
+    if seed_host is not None and not any(ex.host == seed_host and not _is_redirect(ex) for ex in exchanges):
+        seed_host = None        # the given host only redirected elsewhere (example.com -> www.example.com)
     if seed_host is None and exchanges:
         hosts: dict[str, int] = defaultdict(int)
         for ex in exchanges:
