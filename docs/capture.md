@@ -14,6 +14,18 @@ proxy2model history.xml -w shop
 
 Burp Community is enough. A **Logger++ CSV** works too (`--skip-tools Scanner` drops scanner rows).
 
+## Caido
+
+In **HTTP History**, **Export**, choose JSON or CSV (*export all*, or *export current rows* to keep
+only your filter and scope).
+
+```bash
+proxy2model caido-export.json -w shop
+```
+
+Each request's `source` works like a Burp tool: `--skip-tools automate` drops Automate traffic,
+`--only-tools intercept` keeps only what you browsed. Requests without a response are skipped.
+
 ## HAR (browser, ZAP, mitmproxy, Hetty, Charles)
 
 ```bash

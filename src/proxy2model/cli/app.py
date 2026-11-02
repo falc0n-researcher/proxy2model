@@ -26,7 +26,7 @@ from .browse import cmd_browse
 
 # What a researcher reaches for every day; everything else is one line under "More".
 COMMANDS = [
-    ("build", "build the model from a Burp XML, Logger++ CSV or HAR export"),
+    ("build", "build the model from a Burp XML, Logger++ CSV, HAR or Caido export"),
     ("browse", "open a browser, record what you do in it, build the model as you go"),
     ("crawl", "build the model by crawling a running app (authorized targets only)"),
     ("query", "ask the model a question, answered with evidence and no AI"),
@@ -52,7 +52,7 @@ def overview() -> str:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
         prog="proxy2model",
-        description="Turn captured proxy traffic (Burp, HAR, Logger++) into an evidence-backed web-app model.",
+        description="Turn captured proxy traffic (Burp, Caido, HAR, Logger++) into an evidence-backed web-app model.",
     )
     p.add_argument("--version", action="version", version=f"proxy2model {__version__}")
     p.set_defaults(func=None)
@@ -66,7 +66,7 @@ def main(argv=None) -> int:
     sub = _Sub()
 
     b = sub.add_parser("build", help="build the model (also the default: `proxy2model file.xml`)")
-    b.add_argument("log", help="Burp 'Save items' XML, Logger++ CSV or HAR export to build from")
+    b.add_argument("log", help="Burp 'Save items' XML, Logger++ CSV, HAR or Caido JSON/CSV export to build from")
     b.add_argument("--webapp", "-w", default="app", type=_name("--webapp"),
                    help="name for this app's model (default: app)")
     b.add_argument("--role", type=_name("--role"),
@@ -94,9 +94,11 @@ def main(argv=None) -> int:
     b.add_argument("--osint-timeout", type=float, default=5.0, metavar="SEC",
                    help="per-lookup timeout for the build's OSINT (default: 5)")
     b.add_argument("--skip-tools", metavar="TOOLS",
-                   help="Logger++ CSV: drop rows from these Burp tools (comma-separated), e.g. Scanner")
+                   help="Logger++ CSV: drop rows from these Burp tools (comma-separated), e.g. Scanner; "
+                        "Caido: drop these sources, e.g. automate")
     b.add_argument("--only-tools", metavar="TOOLS",
-                   help="Logger++ CSV: keep only rows from these Burp tools, e.g. Proxy,Extensions")
+                   help="Logger++ CSV: keep only rows from these Burp tools, e.g. Proxy,Extensions; "
+                        "Caido: keep only these sources, e.g. intercept")
     b.add_argument("--animate", action="store_true",
                    help="play the build animation in the terminal")
     b.add_argument("--no-type", action="store_true",
@@ -335,16 +337,17 @@ def main(argv=None) -> int:
 
     wa = sub.add_parser("watch", help="watch a folder of exports: each new export becomes a build, "
                                       "and the change from the last one is printed")
-    wa.add_argument("folder", help="folder exports (Burp Save items XML, Logger++ CSV or HAR) are saved into")
+    wa.add_argument("folder", help="folder exports (Burp Save items XML, Logger++ CSV, HAR or Caido) are saved into")
     wa.add_argument("--webapp", "-w", required=True, type=_name("webapp"), help="name for the model")
     wa.add_argument("--interval", type=float, default=5.0, metavar="SEC", help="seconds between checks (default: 5)")
     wa.add_argument("--once", action="store_true", help="process what is there and exit instead of watching")
     wa.add_argument("--skip-existing", action="store_true",
                     help="only react to exports that appear after this starts")
-    wa.add_argument("--pattern", default="*.xml,*.csv,*.har", help="file patterns to pick up (default: *.xml,*.csv,*.har)")
+    wa.add_argument("--pattern", default="*.xml,*.csv,*.har,*.json",
+                    help="file patterns to pick up (default: *.xml,*.csv,*.har,*.json)")
     wa.add_argument("--role", help="tag each export with this role (merges with other roles' inputs)")
     wa.add_argument("--scope", action="append", help="in-scope host (repeatable), as for build")
-    wa.add_argument("--skip-tools", metavar="TOOLS", help="Logger++ CSV: drop rows from these Burp tools")
+    wa.add_argument("--skip-tools", metavar="TOOLS", help="Logger++ CSV: drop rows from these Burp tools (Caido: these sources)")
     wa.add_argument("--osint", action="store_true", help="also run light external recon on each build")
     wa.add_argument("--out", default="proxy2model-out", help="output directory (default: proxy2model-out)")
     wa.set_defaults(func=cmd_watch)

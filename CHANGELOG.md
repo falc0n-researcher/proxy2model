@@ -13,6 +13,8 @@ proxy2model is the new name of burp2model. Its history up to 1.3.0 is in
   background tab of the same browser, sharing your login, GET only unless `--allow-writes`. It asks
   for a role, can keep the login between sessions (`--keep-login`), skips images, fonts and
   stylesheets, records WebSocket handshakes, and ends with the code-only endpoints to visit next.
+- **Caido exports.** A Caido HTTP history export (JSON or CSV) builds like a Burp export; its
+  `source` filters with `--skip-tools` / `--only-tools`. `watch` also picks up `*.json`.
 - **MCP server.** `mcp` serves built models to an AI agent (Claude Code, Claude Desktop, Cursor ...)
   with the same cited answers as the CLI. Read-only.
 - **OpenAPI.** Every build writes `openapi.json`, with response schemas read from JSON bodies;

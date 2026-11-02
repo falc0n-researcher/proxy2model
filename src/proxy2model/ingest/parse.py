@@ -571,16 +571,24 @@ def parse_items(path: str, role: str | None = None, stats: dict | None = None,
                 skip_tools: tuple = (), only_tools: tuple = ()):
     """Yield redacted Exchange objects from a Burp export. Streaming.
 
-    Takes a Burp "Save items" XML or a Logger++ CSV export (chosen by the file
-    extension). If `stats` is given it is filled with items/parsed/skipped counts.
-    `skip_tools` / `only_tools` filter a Logger++ CSV by its Tool column.
+    Takes a Burp "Save items" XML, a Logger++ CSV, a HAR or a Caido JSON/CSV export (chosen
+    by the file extension and its first bytes). If `stats` is given it is filled with
+    items/parsed/skipped counts. `skip_tools` / `only_tools` filter a Logger++ CSV by its
+    Tool column, and a Caido export by its source.
     """
     if stats is None:
         stats = {}
     for k in ("items", "parsed", "skipped"):
         stats.setdefault(k, 0)
     if path.lower().endswith(".csv"):
+        caido = _caido_csv_header(path)
+        if caido is not None:
+            yield from _parse_caido(path, role, stats, skip_tools, only_tools, caido)
+            return
         yield from _parse_logger_csv(path, role, stats, skip_tools, only_tools)
+        return
+    if _looks_like_caido_json(path):
+        yield from _parse_caido(path, role, stats, skip_tools, only_tools)
         return
     if path.lower().endswith(".har") or _looks_like_har(path):
         yield from _parse_har(path, role, stats)
@@ -940,6 +948,122 @@ def _har_exchanges(entries, source, role, stats):
         stats["items"] += 1
         try:
             item = _har_item(entry) if isinstance(entry, dict) else None
+            ex = _parse_item(item, idx, role) if item is not None else None
+        except Exception:
+            ex = None
+        if ex is None:
+            stats["skipped"] += 1
+            continue
+        ex.source, ex.item = source, item_no
+        idx += 1
+        stats["parsed"] += 1
+        yield ex
+
+
+# ---------------------------------------------------------------------- Caido --
+
+# Caido's HTTP history export: a JSON array of requests, each with its response nested under
+# `response`, or a CSV with one row per pair and the response columns prefixed `response_`.
+# `raw` holds the whole request or response, base64-encoded.
+_CAIDO_CSV_NEEDED = ("host", "method", "raw", "response_raw")
+
+
+def _looks_like_caido_json(path: str) -> bool:
+    if not path.lower().endswith(".json"):
+        return False
+    try:
+        with open(path, "rb") as f:
+            head = f.read(4096).lstrip(b"\xef\xbb\xbf \t\r\n")
+    except OSError:
+        return False
+    return head.startswith(b"[") and b'"raw"' in head and (b'"is_tls"' in head or b'"host"' in head)
+
+
+def _caido_csv_header(path: str) -> list[str] | None:
+    import csv
+    try:
+        with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
+            header = [h.strip().lower() for h in next(csv.reader(fh), [])]
+    except OSError:
+        return None
+    return header if all(c in header for c in _CAIDO_CSV_NEEDED) else None
+
+
+def _truthy(v) -> bool:
+    return v is True or str(v).strip().lower() in ("true", "1", "yes")
+
+
+def _caido_item(rec: dict):
+    """One Caido request (JSON object, or CSV row with `response_*` columns) as an <item> element."""
+    from xml.etree.ElementTree import Element, SubElement
+    rs = rec.get("response")
+    if not isinstance(rs, dict):
+        rs = {k[len("response_"):]: v for k, v in rec.items() if k.startswith("response_")}
+    raw_rq, raw_rs = str(rec.get("raw") or "").strip(), str(rs.get("raw") or "").strip()
+    host = str(rec.get("host") or "").strip().lower()
+    status = _int(str(rs.get("status_code") or "").strip(), 0)
+    if not host or not raw_rq or not raw_rs or not status:
+        return None                                                   # a request that never got a response
+    tls = _truthy(rec.get("is_tls"))
+    path = str(rec.get("path") or "/").strip() or "/"
+    query = str(rec.get("query") or "").strip().lstrip("?")
+    if query and "?" not in path:
+        path += "?" + query
+    item = Element("item")
+    for tag, val in (("method", str(rec.get("method") or "GET").upper()), ("host", host),
+                     ("port", str(rec.get("port") or (443 if tls else 80))),
+                     ("protocol", "https" if tls else "http"), ("path", path),
+                     ("status", str(status)), ("mimetype", "")):
+        SubElement(item, tag).text = val
+    for tag, val in (("request", raw_rq), ("response", raw_rs)):
+        b64, text = _b64_text(val)
+        SubElement(item, tag, {"base64": b64}).text = text
+    return item
+
+
+def _caido_records(path: str, csv_header: list[str] | None):
+    if csv_header is not None:
+        import csv
+        csv.field_size_limit(2 ** 31 - 1)
+        with open(path, newline="", encoding="utf-8-sig", errors="replace") as fh:
+            reader = csv.reader(fh)
+            next(reader, None)
+            for row in reader:
+                if any(c.strip() for c in row):
+                    yield dict(zip(csv_header, row))
+        return
+    with open(path, encoding="utf-8-sig", errors="replace") as f:
+        try:
+            yield from _JsonStream(f).items()
+        except ValueError as e:
+            raise ValueError(f"not a Caido export (not a valid JSON array: {e})")
+
+
+def _parse_caido(path, role, stats, skip_tools, only_tools, csv_header=None):
+    """A Caido HTTP history export (JSON or CSV), read as if it were a Burp export. Streamed.
+
+    `source` (intercept, replay, automate ...) plays the part of Logger++'s Tool column for
+    `skip_tools` / `only_tools`.
+    """
+    source = os.path.basename(path)
+    skip = {t.strip().lower() for t in skip_tools if t.strip()}
+    only = {t.strip().lower() for t in only_tools if t.strip()}
+    tools: dict[str, int] = stats.setdefault("tools", {})
+    stats["format"] = "caido"
+    idx = 1
+    for item_no, rec in enumerate(_caido_records(path, csv_header)):
+        if not isinstance(rec, dict):
+            stats["items"] += 1
+            stats["skipped"] += 1
+            continue
+        tool = str(rec.get("source") or "").strip() or "?"
+        tools[tool] = tools.get(tool, 0) + 1
+        if (skip and tool.lower() in skip) or (only and tool.lower() not in only):
+            stats["filtered"] = stats.get("filtered", 0) + 1
+            continue
+        stats["items"] += 1
+        try:
+            item = _caido_item(rec)
             ex = _parse_item(item, idx, role) if item is not None else None
         except Exception:
             ex = None

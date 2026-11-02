@@ -25,7 +25,7 @@ which request proves it, and what the capture could not show.
 
 | Traffic from | Command |
 | --- | --- |
-| Burp (*Save items* XML), Logger++ CSV, or a HAR (browser, ZAP, mitmproxy) | `proxy2model FILE -w app` |
+| Burp (*Save items* XML), Logger++ CSV, Caido (JSON or CSV), or a HAR (browser, ZAP, mitmproxy) | `proxy2model FILE -w app` |
 | A browser it opens and records while you use the app | `proxy2model browse` |
 | A crawl of a running app | `proxy2model crawl URL -w app --yes` |
 
@@ -96,7 +96,7 @@ are authorized to test. CI plants fake secrets in the samples and fails if one r
 
 ## Docs
 
-- [Capturing traffic](docs/capture.md): Burp, HAR, `browse`, roles
+- [Capturing traffic](docs/capture.md): Burp, Caido, HAR, `browse`, roles
 - [Crawling](docs/crawling.md): `crawl` and scripted journeys
 - [The model](docs/model.md): what is in it and how it is built
 - [Querying](docs/querying.md): `query`, BQL, graph, diff between builds

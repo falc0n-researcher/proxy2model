@@ -45,7 +45,10 @@ def cmd_build(args) -> int:
             extra = "\nExpected a HAR file: browser DevTools (Save all as HAR), Hetty, mitmproxy, ZAP or Charles can export one."
         elif str(args.log).lower().endswith(".csv"):
             extra = ("\nExpected a Burp Logger++ CSV export with Method, Host, Request and Response "
-                     "columns (Request/Response base64 or raw HTTP).")
+                     "columns (Request/Response base64 or raw HTTP), or a Caido HTTP history CSV export.")
+        elif str(args.log).lower().endswith(".json"):
+            extra = ("\nExpected a HAR file or a Caido HTTP history export "
+                     "(HTTP History, Export, JSON).")
         elif isinstance(e, SyntaxError):
             extra = ("\nThis does not look like a Burp 'Save items' export.\n"
                      "In Burp: Proxy → HTTP history → select all → right-click → "
@@ -56,7 +59,7 @@ def cmd_build(args) -> int:
         return 2
     if stats.get("tools"):
         mix = ", ".join(f"{t} {n}" for t, n in sorted(stats["tools"].items(), key=lambda kv: -kv[1]))
-        print(f"logger csv: {mix}" + (f" · skipped {stats['filtered']} by tool" if stats.get("filtered") else ""),
+        print(f"{'caido sources' if stats.get('format') == 'caido' else 'logger csv'}: {mix}" + (f" · skipped {stats['filtered']} by tool" if stats.get("filtered") else ""),
               file=sys.stderr)
         if "Scanner" in stats["tools"] and not stats.get("filtered") and stats["tools"]["Scanner"] >= 20:
             print("  note: this export includes Scanner traffic (active-scan probes). They show up as "
@@ -67,7 +70,7 @@ def cmd_build(args) -> int:
         _drop_if_empty(outdir)
         if stats.get("items", 0) == 0:
             print(f"{args.log}: no requests found. This does not look like a Burp "
-                  "'Save items' export, a Logger++ CSV or a HAR file.\n"
+                  "'Save items' export, a Logger++ CSV, a HAR or a Caido export.\n"
                   "In Burp: Proxy → HTTP history → select all → right-click → "
                   "Save items → history.xml (keep base64 encoding on).", file=sys.stderr)
         else:
