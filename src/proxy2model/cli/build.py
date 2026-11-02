@@ -166,7 +166,9 @@ def _summary(args, outdir: str, m, stats: dict, merged: list[str]) -> str:
     c = m.counts()
     st = c["api_state"]
     source = getattr(args, "log", None) or getattr(args, "url", None) or "saved inputs"
-    roles = [n for n in merged if n != DEFAULT_INPUT]
+    # input names are roles, except the untagged ones; browser sessions save as browse[-ROLE]
+    roles = sorted({n.split("-", 1)[1] if n.startswith(("browse-", "live-")) else n for n in merged}
+                   - {DEFAULT_INPUT, "browse", "live"})
     lines = ["", ui.title("build", args.webapp), "",
              ui.row("input", str(source))]
     if roles:
