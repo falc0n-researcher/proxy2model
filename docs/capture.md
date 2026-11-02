@@ -1,9 +1,11 @@
-# Capturing traffic
+<img src="../assets/readme/doc-capture.svg" alt="proxy2model docs 01: Capturing traffic" width="100%">
 
 proxy2model reads traffic you already captured, or records your own browser. Only capture traffic you are
 authorized to record. Everything runs locally.
 
-## Burp Suite
+---
+
+### `//` Burp Suite
 
 1. Set **Target > Scope** and browse the app through Burp as the role you want to capture.
 2. In **Proxy > HTTP history**, select all, right-click, **Save items**. Keep base64 encoding on.
@@ -14,7 +16,9 @@ proxy2model history.xml -w shop
 
 Burp Community is enough. A **Logger++ CSV** works too (`--skip-tools Scanner` drops scanner rows).
 
-## Caido
+---
+
+### `//` Caido
 
 In **HTTP History**, **Export**, choose JSON or CSV (*export all*, or *export current rows* to keep
 only your filter and scope).
@@ -26,7 +30,9 @@ proxy2model caido-export.json -w shop
 Each request's `source` works like a Burp tool: `--skip-tools automate` drops Automate traffic,
 `--only-tools intercept` keeps only what you browsed. Requests without a response are skipped.
 
-## HAR (browser, ZAP, mitmproxy, Hetty, Charles)
+---
+
+### `//` HAR (browser, ZAP, mitmproxy, Hetty, Charles)
 
 ```bash
 proxy2model session.har -w shop
@@ -34,7 +40,9 @@ proxy2model session.har -w shop
 
 In a browser: DevTools, Network, *Save all as HAR with content*. Requests that never got a response are skipped.
 
-## Your own browser
+---
+
+### `//` Your own browser
 
 `browse` opens a browser and records what you do in it. The model rebuilds as you go; no proxy,
 no export, no certificate to install.
@@ -74,7 +82,9 @@ proxy2model browse https://app.example.com --scope '*.example.com' -w shop --act
 
 Needs Chrome, Chromium, Edge or Brave (found automatically, or `--chrome PATH`).
 
-## Roles
+---
+
+### `//` Roles
 
 Capture once per role, then compare:
 
@@ -86,10 +96,18 @@ proxy2model cross-role shop --low user --high admin
 
 Rebuilding a role replaces only that role; a build without `--role`, or with `--fresh`, starts over.
 
-## Keep exporting
+---
+
+### `//` Keep exporting
 
 `proxy2model watch FOLDER -w shop` builds every new export dropped into the folder and prints what changed.
 
-## No proxy
+---
+
+### `//` No proxy
 
 `proxy2model crawl https://shop.example.com/ -w shop --yes` drives a real browser. See [crawling.md](crawling.md).
+
+---
+
+<sub>[field manual](../README.md#-field-manual) &nbsp;·&nbsp; [02 · Crawling a running app →](crawling.md)</sub>

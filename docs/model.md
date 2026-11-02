@@ -1,4 +1,4 @@
-# How proxy2model works
+<img src="../assets/readme/doc-model.svg" alt="proxy2model docs 03: How it works" width="100%">
 
 Traffic goes in, a model comes out. Parsing, redaction, modelling and querying are offline. Only `crawl`, `browse --active` and `osint` (and `build --osint`) send requests of their own. `PROXY2MODEL_OFFLINE=1` forces recon off.
 
@@ -10,7 +10,9 @@ export, browse or crawl  ->  parse  ->  redact  ->  model  ->  six-layer graph
                                                               `-- model.json
 ```
 
-## 1. Parse
+---
+
+### `//` 1. Parse
 
 The parser streams the export one item at a time (Burp XML, Logger++ CSV and HAR alike), decodes base64, splits headers from bodies and undoes gzip/deflate. Paths are templated (`/api/users/123` becomes `/api/users/{id}`) so one endpoint is one node. Items that cannot be parsed are counted and reported as the `CAPTURE_ITEMS_SKIPPED` unknown.
 
@@ -24,7 +26,9 @@ From each body (up to 10 MB; larger scripts raise `SCRIPT_PARTIALLY_SCANNED`) it
 Posts from bot-detection and challenge vendors (Akamai, Cloudflare, PerimeterX, Kasada, Imperva) to the app's
 own host are kept as evidence but are not endpoints.
 
-## 2. Redact
+---
+
+### `//` 2. Redact
 
 Every value is masked before an exchange leaves the parser. Names and shapes are kept.
 
@@ -34,7 +38,9 @@ Every value is masked before an exchange leaves the parser. Names and shapes are
 
 Each masked value is stored as a fingerprint: a keyed HMAC-SHA256 prefix, its length and its entropy. The key lives in `~/.config/proxy2model/`, outside the output directory, so fingerprints cannot be used to confirm a guess. `PROXY2MODEL_FP_KEY` overrides it. Tests check that no planted secret appears in any output file.
 
-## 3. Model
+---
+
+### `//` 3. Model
 
 By default, every host under the registrable domain of the busiest host is first-party. `--scope` overrides this. Other hosts are third parties.
 
@@ -49,11 +55,15 @@ By default, every host under the registrable domain of the busiest host is first
 
 Layer 3 also records workers (`new Worker`, `serviceWorker.register`, `importScripts`) as scripts linked by `SPAWNS` edges, and source maps (`sourceMappingURL`) as a `sourcemap` attribute on the script. If the `.map` file was not captured, the model raises `SOURCE_MAP_NOT_CAPTURED`.
 
-## Technology stack
+---
+
+### `//` Technology stack
 
 While parsing, proxy2model reads what each response shows: `Server` and similar headers, cookie names, HTML and script markers, and the third-party hosts the app talks to. The result is a short list (edge or CDN, web server, language or framework, frontend, platform, services), each entry tied to the requests that showed it. These are hints from the capture, not a version scan. The report draws them as a stack map, and `context.json` carries them as `stack`.
 
-## 4. OBSERVED vs INFERRED
+---
+
+### `//` 4. OBSERVED vs INFERRED
 
 Every edge says how it is known.
 
@@ -63,7 +73,9 @@ Every edge says how it is known.
 | INFERRED | read from code, not proven | script `REFERENCES` endpoint, script `SPAWNS` worker |
 | EXTERNAL | from OSINT | host to IP, certificate, subdomain |
 
-## 5. Reconcile
+---
+
+### `//` 5. Reconcile
 
 Code references are matched to observed endpoints by templated path, then method, then host.
 
@@ -75,7 +87,9 @@ A reference whose method cannot be read is shown as `*`, never guessed as `GET`.
 base URL is a variable in the code (`${apiHost}/v1/accounts`) is shown as `{base}/v1/accounts`, never
 pinned to the page's host, and left out of OpenAPI.
 
-## 6. Unknowns
+---
+
+### `//` 6. Unknowns
 
 The model names its gaps. Absence in the model means absence in the capture, not in the target.
 
@@ -90,13 +104,17 @@ The model names its gaps. Absence in the model means absence in the capture, not
 | `SOURCE_MAP_NOT_CAPTURED` | a script names a source map that was not captured |
 | `CAPTURE_ITEMS_SKIPPED` | export items could not be parsed |
 
-## 7. Roles and evidence
+---
+
+### `//` 7. Roles and evidence
 
 Each `--role` build saves masked records to `inputs/<role>.jsonl` (`browse` saves to `inputs/browse.jsonl`), then rebuilds one model from everything saved. Rebuilding a role replaces only that role. A build without `--role`, or with `--fresh`, starts over.
 
 Every claim cites an evidence id (`ev_1`, `ev_2`, ... numbered from 1). The report shows the same ids as EVD 1, EVD 2. The `evidence` table in `model.json` maps each id to its source file and item. Ids are renumbered when roles merge, so treat the outputs of one build as one set and re-copy after a rebuild.
 
-## 8. Outputs
+---
+
+### `//` 8. Outputs
 
 - `graph.db`: the model as a SQLite graph, queried with [BQL](querying.md).
 - `report.html`: an offline, self-contained report.
@@ -104,10 +122,18 @@ Every claim cites an evidence id (`ev_1`, `ev_2`, ... numbered from 1). The repo
 - `openapi.json`: the observed API as OpenAPI 3.0, with a response schema wherever a JSON body was seen.
 - `model.json`, `inputs/`, and `exports/` (graph.json, graph.graphml, build.svg).
 
-## 9. OSINT
+---
+
+### `//` 9. OSINT
 
 `proxy2model osint <host> --yes` contacts the target and public services (DNS, TLS, HTTP headers, certificate transparency, RDAP). `build --osint` runs a light version on the primary public host and carries on if it fails. A plain `build` never does. Results are saved to `graph.db` as `EXTERNAL` nodes, kept apart from captured traffic.
 
-## 10. Crawling and browsing
+---
 
-`crawl` and `browse` record traffic themselves; it passes through the same parser and redaction as an export. See [crawling.md](crawling.md) and [capture.md](capture.md#your-own-browser).
+### `//` 10. Crawling and browsing
+
+`crawl` and `browse` record traffic themselves; it passes through the same parser and redaction as an export. See [crawling.md](crawling.md) and [capture.md](capture.md#-your-own-browser).
+
+---
+
+<sub>[← 02 · Crawling a running app](crawling.md) &nbsp;·&nbsp; [field manual](../README.md#-field-manual) &nbsp;·&nbsp; [04 · Querying the model →](querying.md)</sub>

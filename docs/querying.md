@@ -1,6 +1,6 @@
-# Querying the model
+<img src="../assets/readme/doc-querying.svg" alt="proxy2model docs 04: Querying the model" width="100%">
 
-## Plain questions (no AI)
+### `//` Plain questions (no AI)
 
 ```
 $ proxy2model query shop "code vs runtime"
@@ -29,7 +29,9 @@ Every line cites the request behind it. `*` means the code names the path but no
 
 Also: `parameters`, `secrets` (masked), `privileged`, `errors`, `shape`. Anything else is refused: the answer comes from the model or the tool says it cannot. `proxy2model query shop help` lists them.
 
-## BQL
+---
+
+### `//` BQL
 
 `graph.db` holds the whole model. `proxy2model q` queries it with filters and graph verbs:
 
@@ -47,7 +49,9 @@ proxy2model q shop            # interactive; `help` lists the language
 
 Fields are `req.*`, `resp.*`, `node.*`, `edge.*`. Operators: `eq ne cont ncont like regex gt gte lt lte`. Combine with `AND OR NOT ( )`. Values are bound as SQL parameters. The same console is in `report.html`.
 
-## Graph reach
+---
+
+### `//` Graph reach
 
 ```bash
 proxy2model graph shop --reach /api/checkout     # entry point -> ... -> the endpoint, as JSON
@@ -59,7 +63,9 @@ proxy2model graph shop --reach /api/checkout     # entry point -> ... -> the end
 
 `proxy2model graph shop` alone gives functional areas, trust zones and coupling.
 
-## Analyst commands
+---
+
+### `//` Analyst commands
 
 ```bash
 proxy2model gaps shop                               # unknowns ranked by value of resolving them
@@ -70,7 +76,7 @@ proxy2model falsify shop                            # prompt that tries to dispr
 proxy2model methodology shop [--prompt]             # target-specific plan, or the AI prompt for it
 ```
 
-### What changed between builds
+#### What changed between builds
 
 Every build is kept in `graph.db`. `diff` compares two of them (by default the last two). Abridged, from the two bundled samples:
 
@@ -93,3 +99,7 @@ A new page, the script it loads, the endpoint that script names and its paramete
 To build as you go, save each export into one folder and run `proxy2model watch FOLDER -w shop`. Every new export becomes a build named after its file, and the change from the last build prints. Works with Burp Community.
 
 All results are hypotheses to verify in an authorized session. The same five analyst roles are in the [`skill/`](../skill/) playbook. A sample report is in [`examples/juiceshop/report.html`](examples/juiceshop/report.html).
+
+---
+
+<sub>[← 03 · How it works](model.md) &nbsp;·&nbsp; [field manual](../README.md#-field-manual) &nbsp;·&nbsp; [05 · Using it with an AI →](ai.md)</sub>

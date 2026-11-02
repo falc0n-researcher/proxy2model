@@ -1,6 +1,6 @@
-# Crawling a running app
+<img src="../assets/readme/doc-crawling.svg" alt="proxy2model docs 02: Crawling a running app" width="100%">
 
-`proxy2model crawl` builds the same model from a live app, with no proxy and no export, and no one at the keyboard (to use the app yourself while it records, see `browse` in [capture.md](capture.md#your-own-browser)). With Chrome or Chromium installed it runs the app in a real browser, so JavaScript executes and the real XHR/fetch traffic is recorded. It clicks through menus and buttons, submits safe forms, follows hash and history routes, then requests the GET endpoints the scripts name that the UI never fired. Without a browser it falls back to a static crawler (links, forms, sitemap, assets).
+`proxy2model crawl` builds the same model from a live app, with no proxy and no export, and no one at the keyboard (to use the app yourself while it records, see `browse` in [capture.md](capture.md#-your-own-browser)). With Chrome or Chromium installed it runs the app in a real browser, so JavaScript executes and the real XHR/fetch traffic is recorded. It clicks through menus and buttons, submits safe forms, follows hash and history routes, then requests the GET endpoints the scripts name that the UI never fired. Without a browser it falls back to a static crawler (links, forms, sitemap, assets).
 
 ```bash
 proxy2model crawl https://shop.example.com/ -w shop --yes --role anon
@@ -11,7 +11,9 @@ proxy2model cross-role shop --low anon --high user
 
 Traffic passes through the same parser and redaction as an export, in memory. Nothing raw is written; `--save-xml` is an opt-in raw export. Defaults are 3,000 requests, depth 12 and 25 clicks per page state. Tune with `--max-requests` (0 removes the cap), `--max-seconds`, `--max-clicks`, `--depth`, `--per-template-cap`, `--threads` and `--delay`.
 
-## Safety
+---
+
+### `//` Safety
 
 Only crawl targets you are authorized to test.
 
@@ -24,14 +26,18 @@ Only crawl targets you are authorized to test.
 | never submits a form with a password field | types a password it was not given |
 | lets the app make its own in-scope requests | allows a non-GET under `--read-only` |
 
-## Screenshot
+---
+
+### `//` Screenshot
 
 An anonymous browser crawl also captures the start page and shows it on the report overview. A crawl that is
 signed in, or that runs a journey, does not, because a signed-in page can show someone's data and pixels are
 not masked. Use `--screenshot FILE` (on `build` or `crawl`) to attach your own PNG, JPEG or WebP, or
 `--no-screenshot` to skip the capture. The picture is saved as `screenshot.jpg` next to the report.
 
-## Journeys
+---
+
+### `//` Journeys
 
 A crawler cannot register, log in or check out on its own. A journey is a short JSON file that does, in the same browser session, before the crawl:
 
@@ -54,7 +60,13 @@ SHOP_EMAIL=... SHOP_PASSWORD=... proxy2model crawl https://shop.example.com/ -w 
 
 Steps: `goto` `click` `fill` `press` `wait` `wait_for` `wait_idle` `request` `set_header` `set_storage` `set_cookie` `scroll`. `extract` saves reply fields as variables, `expect` checks the status, and `${env:NAME}` and `--var name=value` supply values. Files are validated before anything is sent. A failed step is reported by number; the journey continues unless the step is `"required": true`. Journey steps skip the destructive-looking filter but still obey scope, `--read-only` and `--yes`. `--journey-only` skips the autonomous crawl. A sample is in [`samples/journeys/`](../samples/journeys/).
 
-## What to expect
+---
+
+### `//` What to expect
 
 A crawler reaches what it can click and what the scripts name. Sign-ups, checkouts and other
 state-changing flows need a journey or a real session (`browse`, or an export).
+
+---
+
+<sub>[← 01 · Capturing traffic](capture.md) &nbsp;·&nbsp; [field manual](../README.md#-field-manual) &nbsp;·&nbsp; [03 · How it works →](model.md)</sub>
