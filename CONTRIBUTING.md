@@ -20,7 +20,7 @@ src/proxy2model/
 ├── export/   OpenAPI
 ├── recon/    opt-in external recon
 ├── cli/      one module per group of commands; ui.py for terminal output
-└── data/     bundled data (public suffix list, fonts, the Caido script)
+└── data/     bundled data (public suffix list, fonts)
 ```
 
 ## Ground rules
@@ -37,7 +37,7 @@ src/proxy2model/
 1. Set `__version__` in `src/proxy2model/__init__.py` and give it a `## X.Y.Z` section in `CHANGELOG.md`.
 2. Rebuild the demo and example reports (`./demo.sh`, the Juice Shop loop in `docs/examples/README.md`).
 3. Look at it, not only the tests: open the report and the landing page, run `proxy2model` and a build,
-   and paste `serve --caido-script` into Caido. Unit tests do not see a stale logo or a broken paste.
+   and record a few pages with `browse`. Unit tests do not see a stale logo or a broken flow.
 4. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`. The release workflow checks the tag
    against the version and changelog, runs the tests, publishes to PyPI and creates the GitHub release.
 

@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "falc0n" }]
-keywords = ["security", "recon", "burp", "caido", "har", "proxy", "attack-surface", "api-security", "ai", "llm", "appsec"]
+keywords = ["security", "recon", "burp", "har", "proxy", "attack-surface", "api-security", "ai", "llm", "appsec"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",

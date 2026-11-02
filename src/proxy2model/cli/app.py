@@ -21,15 +21,13 @@ from .analyze import (
     cmd_q, cmd_query, cmd_crossrole, cmd_osint, cmd_graph, cmd_methodology, cmd_gaps, cmd_changes, cmd_falsify, cmd_openapi, cmd_animate,
 )
 from .mcp import cmd_mcp
-from .live import (
-    cmd_serve,
-)
+from .browse import cmd_browse
 
 
 # What a researcher reaches for every day; everything else is one line under "More".
 COMMANDS = [
     ("build", "build the model from a Burp XML, Logger++ CSV or HAR export"),
-    ("serve", "keep the model up to date from live traffic (Caido, scripts)"),
+    ("browse", "open a browser, record what you do in it, build the model as you go"),
     ("crawl", "build the model by crawling a running app (authorized targets only)"),
     ("query", "ask the model a question, answered with evidence and no AI"),
     ("diff", "what changed between two builds"),
@@ -259,30 +257,38 @@ def main(argv=None) -> int:
     gp.add_argument("--out", default="proxy2model-out", help="output directory used at build time")
     gp.set_defaults(func=cmd_gaps)
 
-    sv = sub.add_parser("serve", help="listen for live traffic pushed by a proxy (Caido workflow, script) "
-                                      "and keep the model up to date")
-    sv.add_argument("--webapp", "-w", default="app", type=_name("--webapp"),
-                    help="name for this app's model (default: app)")
-    sv.add_argument("--port", type=int, default=8765, help="port to listen on (default: 8765)")
-    sv.add_argument("--bind", default="127.0.0.1",
-                    help="address to listen on (default: 127.0.0.1; anything else needs --token)")
-    sv.add_argument("--token", help="require this token in X-Proxy2model-Token or Authorization: Bearer "
-                                    "(or set PROXY2MODEL_TOKEN)")
-    sv.add_argument("--role", type=_name("--role"), help="tag live traffic with a role")
-    sv.add_argument("--fresh", action="store_true",
-                    help="discard every saved input (earlier builds and live sessions) first")
-    sv.add_argument("--interval", type=float, default=5.0, metavar="SEC",
-                    help="rebuild at most this often when new traffic arrives (default: 5)")
-    sv.add_argument("--scope", action="append",
-                    help="first-party host or domain (repeatable or comma-separated)")
-    sv.add_argument("--lens", choices=LENSES, default="attention", help="ordering/filter for context.json")
-    sv.add_argument("--cap", type=int, default=40, metavar="N", help="max items per section in context.json")
-    sv.add_argument("--label", metavar="TEXT", help="name for this session's build in the history (default: live)")
-    sv.add_argument("--out", default="proxy2model-out", help="output directory (default: proxy2model-out)")
-    sv.add_argument("--caido-script", action="store_true",
-                    help="print the Caido passive-workflow script for this listener and exit")
-    sv.add_argument("--verbose", action="store_true", help="log every HTTP request to the listener")
-    sv.set_defaults(func=cmd_serve)
+    bw = sub.add_parser("browse", help="open a browser and build the model from what you do in it; "
+                                       "asks for the URL, scope and mode when they are not given")
+    bw.add_argument("url", nargs="?", help="the app's start URL")
+    bw.add_argument("--webapp", "-w", type=_name("--webapp"),
+                    help="name for this app's model (default: from the domain)")
+    bw.add_argument("--scope", action="append",
+                    help="what to record: host, host:port or *.domain (repeatable or comma-separated; "
+                         "default: *.<the URL's domain>)")
+    mode = bw.add_mutually_exclusive_group()
+    mode.add_argument("--active", dest="active", action="store_true", default=None,
+                      help="also crawl the app in a background tab, sharing your login (authorized targets only)")
+    mode.add_argument("--passive", dest="active", action="store_false",
+                      help="record only what you do (the default)")
+    bw.add_argument("--yes", action="store_true",
+                    help="ask nothing: you are authorized to test the target; defaults fill the rest")
+    bw.add_argument("--role", type=_name("--role"), help="tag this session's traffic with a role")
+    bw.add_argument("--fresh", action="store_true",
+                    help="discard every saved input (earlier builds and sessions) first")
+    bw.add_argument("--read-only", action="store_true", help="active crawl: never send anything but GET")
+    bw.add_argument("--max-requests", type=int, default=3000, metavar="N",
+                    help="active crawl: stop after N requests (default: 3000; 0 = no limit)")
+    bw.add_argument("--max-seconds", type=float, default=0, metavar="SEC", help="active crawl: time limit")
+    bw.add_argument("--chrome", metavar="PATH", help="the Chrome/Chromium/Edge/Brave to use (default: found)")
+    bw.add_argument("--insecure", action="store_true", help="accept invalid TLS certificates")
+    bw.add_argument("--headless", action="store_true", help=argparse.SUPPRESS)       # tests
+    bw.add_argument("--interval", type=float, default=5.0, metavar="SEC",
+                    help="rebuild at most this often while new traffic arrives (default: 5)")
+    bw.add_argument("--lens", choices=LENSES, default="attention", help="ordering/filter for context.json")
+    bw.add_argument("--cap", type=int, default=40, metavar="N", help="max items per section in context.json")
+    bw.add_argument("--label", metavar="TEXT", help="name for this session's build in the history (default: browse)")
+    bw.add_argument("--out", default="proxy2model-out", help="output directory (default: proxy2model-out)")
+    bw.set_defaults(func=cmd_browse)
 
     mc = sub.add_parser("mcp", help="serve the built models to an AI agent over MCP (stdio); read-only")
     mc.add_argument("--out", default="proxy2model-out",
@@ -372,7 +378,7 @@ def main(argv=None) -> int:
 
     argv = list(sys.argv[1:] if argv is None else argv)
     known = {"build", "crawl", "query", "q", "cross-role", "osint", "graph", "methodology",
-             "gaps", "openapi", "serve", "mcp", "changes", "diff", "builds", "watch", "falsify", "animate", "-h", "--help", "--version"}
+             "gaps", "openapi", "browse", "mcp", "changes", "diff", "builds", "watch", "falsify", "animate", "-h", "--help", "--version"}
     # bare `proxy2model file.xml ...` → treat as build, but only when the first
     # word is a real file; a typo'd subcommand gets a clear error instead
     if argv and argv[0] not in known and not argv[0].startswith("-"):

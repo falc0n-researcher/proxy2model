@@ -174,7 +174,7 @@ def write_db(m: Model, path: str, osint: dict | None = None, label: str | None =
     `damaged`) and a new graph.db is started; its build history is never silently deleted.
 
     `replace_build` overwrites that build's snapshot instead of adding one: a live session
-    (`serve`) rebuilds every few seconds but is one build in the history.
+    (`browse`) rebuilds every few seconds but is one build in the history.
     """
     try:
         return _write_db(m, path, osint, label, replace_build)

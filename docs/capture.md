@@ -1,6 +1,6 @@
 # Capturing traffic
 
-proxy2model reads traffic you already captured, or takes it live. Only capture traffic you are
+proxy2model reads traffic you already captured, or records your own browser. Only capture traffic you are
 authorized to record. Everything runs locally.
 
 ## Burp Suite
@@ -22,50 +22,36 @@ proxy2model session.har -w shop
 
 In a browser: DevTools, Network, *Save all as HAR with content*. Requests that never got a response are skipped.
 
-## Live from Caido
+## Your own browser
 
-The model rebuilds a few seconds after each request you make in Caido. No exports.
-
-1. Start the listener:
-   ```bash
-   proxy2model serve -w shop
-   ```
-2. Print the workflow script with `proxy2model serve --caido-script` and copy it
-   (`| pbcopy` on macOS). Add `--port` or `--token` if you use them; the script is filled in with both.
-3. In Caido, open a project, then **Workflows → Passive → New workflow**:
-   **On Intercept Response → In Scope → Javascript**. Paste the script into the Javascript node,
-   save, and make sure the workflow is enabled.
-4. Set your scope in Caido and browse. `serve` prints a line for each rebuild:
-   ```
-   23:41:53  +3  22 saved   1 host   6 routes   7 APIs   0.0s
-   ```
-
-Without the In Scope node, everything Caido proxies is sent.
-
-**Nothing arrives?** Check that a Caido project is open (without one Caido proxies nothing), that
-the workflow is saved and enabled, and that `serve` is running. If the script fails inside Caido,
-`serve` prints its error.
-
-The script sends at most 64 KB of an ordinary body and 2 MB of a page or script (all proxy2model
-uses), and marks what it cut. Each exchange is masked on arrival and only the masked record is
-saved (`inputs/live.jsonl`), so a restart continues where it stopped. A session is one build in the history.
-
-## Live from a script
-
-Anything that can POST JSON can feed `serve`:
+`browse` opens a browser and records what you do in it. The model rebuilds as you go; no proxy,
+no export, no certificate to install.
 
 ```bash
-curl -s http://127.0.0.1:8765/ingest -H 'Content-Type: application/json' -d '{
-  "request":  "'"$(printf 'GET /api/users/7 HTTP/1.1\r\nHost: shop.test\r\n\r\n' | base64)"'",
-  "response": "'"$(printf 'HTTP/1.1 200 OK\r\n\r\n{}' | base64)"'"
-}'
+proxy2model browse
 ```
 
-`request` and `response` are base64 raw HTTP; `host`, `port` and `tls` are optional. Batches go
-as `{"items": [...]}`.
+It asks for the app's URL, the scope (default `*.<its domain>`: the domain and its subdomains), a
+name for the model, and the mode:
 
-The listener binds `127.0.0.1`, accepts only JSON with a loopback `Host` header, and needs
-`--token` to bind anything else.
+- **passive** records only what you do.
+- **active** also crawls the app in a background tab of the same browser, so it shares your login.
+  It stays in scope, never clicks logout- or delete-looking controls and never submits a password
+  form. Only for apps you are authorized to test.
+
+Every tab, popup, frame and worker is recorded from its first request; nothing out of scope is
+recorded, and nothing is blocked. Close the window (or Ctrl-C) to finish: the last build prints
+where the report is. Each exchange is masked on arrival and only the masked record is saved
+(`inputs/browse.jsonl`), so the next session adds to the same model.
+
+Everything can go on the command line instead:
+
+```bash
+proxy2model browse https://app.example.com --scope '*.example.com' -w shop --active --yes --role user
+```
+
+Needs Chrome, Chromium, Edge or Brave (found automatically, or `--chrome PATH`). The browser uses a
+fresh profile that is deleted afterwards.
 
 ## Roles
 

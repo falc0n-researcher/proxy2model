@@ -46,9 +46,8 @@ pip install git+https://github.com/falc0n-researcher/proxy2model    # Python 3.1
 # From an export: Burp XML, Logger++ CSV, or HAR (browser, ZAP, mitmproxy)
 proxy2model history.xml -w shop
 
-# Live from Caido: the model rebuilds while you browse
-proxy2model serve -w shop
-proxy2model serve --caido-script | pbcopy    # paste into a Caido passive workflow (setup: docs/capture.md)
+# Or open a browser and use the app: the model rebuilds as you go (asks for URL, scope, mode)
+proxy2model browse
 
 # Ask it questions, with no AI, or let your AI agent ask (MCP)
 proxy2model query shop help
@@ -79,12 +78,12 @@ proxy2model-out/shop/
 | Say what it could not observe | Claim coverage it did not have |
 | Offer hypotheses and the evidence to test them | Call anything a vulnerability |
 
-A plain build is offline. `crawl` and `osint` contact the target: use them only on systems you
+A plain build is offline. `crawl`, `browse --active` and `osint` send requests of their own: use them only on systems you
 are authorized to test. CI plants fake secrets in the samples and fails if one reaches any output.
 
 ## Docs
 
-- [Capturing traffic](docs/capture.md): Burp, HAR, live from Caido (setup steps), roles
+- [Capturing traffic](docs/capture.md): Burp, HAR, your own browser (`browse`), roles
 - [Crawling](docs/crawling.md): build from a running app, scripted journeys
 - [The model](docs/model.md): how it is built, layer by layer
 - [Querying](docs/querying.md): `query`, BQL, graph, diff

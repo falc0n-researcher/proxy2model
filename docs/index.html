@@ -90,7 +90,7 @@
       <p>Every output is read from one graph. Values are masked at the parser; names and shapes survive.</p>
     </div>
     <div class="pipe">
-      <div class="card step reveal"><span class="num">01 · parse</span><h3>Stream</h3><p>Reads a Burp or HAR export, or traffic pushed live from Caido, and scans JS and HTML bodies for endpoint references.</p></div>
+      <div class="card step reveal"><span class="num">01 · parse</span><h3>Stream</h3><p>Reads a Burp or HAR export, or records a browser while you use the app, and scans JS and HTML bodies for endpoint references.</p></div>
       <div class="card step reveal"><span class="num">02 · redact</span><h3>Mask</h3><p>Masks headers, parameters, bodies and URL paths. Secrets are kept only as keyed fingerprints.</p></div>
       <div class="card step reveal"><span class="num">03 · model</span><h3>Relate</h3><p>Sets scope, then builds edges: <span class="pill obs">OBSERVED</span> from traffic, <span class="pill inf">INFERRED</span> from code.</p></div>
       <div class="card step reveal"><span class="num">04 · reconcile</span><h3>Compare</h3><p>Compares code with runtime: <span class="pill both">BOTH</span> <span class="pill static">STATIC_ONLY</span> <span class="pill runtime">RUNTIME_ONLY</span></p></div>
@@ -159,7 +159,7 @@
 <section class="alt final">
   <div class="wrap reveal">
     <h2>Know the surface before you test it.</h2>
-    <p>Build from a Burp or HAR export, or live from Caido while you browse, then ask it.</p>
+    <p>Build from a Burp or HAR export, or record a browser while you use the app, then ask it.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/falc0n-researcher/proxy2model#quickstart">Read the quickstart</a>
       <a class="btn" href="https://github.com/falc0n-researcher/proxy2model">View on GitHub</a>

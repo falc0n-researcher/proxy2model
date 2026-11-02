@@ -1,6 +1,6 @@
 # Crawling a running app
 
-`proxy2model crawl` builds the same model from a live app, with no proxy and no export. With Chrome or Chromium installed it runs the app in a real browser, so JavaScript executes and the real XHR/fetch traffic is recorded. It clicks through menus and buttons, submits safe forms, follows hash and history routes, then requests the GET endpoints the scripts name that the UI never fired. Without a browser it falls back to a static crawler (links, forms, sitemap, assets).
+`proxy2model crawl` builds the same model from a live app, with no proxy and no export, and no one at the keyboard (to use the app yourself while it records, see `browse` in [capture.md](capture.md#your-own-browser)). With Chrome or Chromium installed it runs the app in a real browser, so JavaScript executes and the real XHR/fetch traffic is recorded. It clicks through menus and buttons, submits safe forms, follows hash and history routes, then requests the GET endpoints the scripts name that the UI never fired. Without a browser it falls back to a static crawler (links, forms, sitemap, assets).
 
 ```bash
 proxy2model crawl https://shop.example.com/ -w shop --yes --role anon

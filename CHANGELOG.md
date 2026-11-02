@@ -7,9 +7,10 @@ proxy2model is the new name of burp2model. Its history up to 1.3.0 is in
 
 - **Renamed.** Package, command and module are `proxy2model`; output goes to `proxy2model-out/`.
   `BURP2MODEL_*` variables and an existing `~/.config/burp2model/fingerprint.key` still work.
-- **Live capture from Caido.** `serve` takes exchanges pushed over HTTP and rebuilds the model as they
-  arrive; `serve --caido-script` prints a passive-workflow script, tested in Caido with responses up
-  to 7 MB. Long sessions rebuild less often so the listener stays light.
+- **`browse`: record your own browser.** Opens Chrome with a fresh profile, asks for the URL, scope
+  (`*.example.com`) and mode, and records every in-scope request of every tab, popup, frame and
+  worker while you use the app. The model rebuilds as you go. **Active** mode also crawls in a
+  background tab of the same browser, sharing your login, with the crawler's guard rails.
 - **MCP server.** `mcp` serves built models to an AI agent (Claude Code, Claude Desktop, Cursor ...)
   with the same cited answers as the CLI. Read-only.
 - **OpenAPI.** Every build writes `openapi.json`; `openapi` exports it on demand.

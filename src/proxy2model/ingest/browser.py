@@ -360,12 +360,58 @@ class _Rec:
         self.body, self.b64, self.rtype, self.done, self.failed, self.post, self.redirect = b"", False, "", False, False, None, False
 
 
+def rec_to_item(rec: _Rec, in_scope) -> Element | None:
+    """One recorded request and its response as a Burp-style <item>, or None when out of scope."""
+    req, resp = rec.req, rec.resp
+    if not req or not resp:
+        return None
+    u = urllib.parse.urlsplit(req["url"])
+    if u.scheme not in ("http", "https") or not in_scope(req["url"]):
+        return None
+    port = u.port or (443 if u.scheme == "https" else 80)
+    path = (u.path or "/") + ("?" + u.query if u.query else "")
+    rq = dict(req.get("headers") or {})
+    rq.update(rec.extra_req or {})
+    rq = {k: v for k, v in rq.items() if not k.startswith(":")}
+    if not any(k.lower() == "host" for k in rq):
+        rq = {"Host": u.netloc, **rq}
+    post = (rec.post or "").encode("utf-8", "replace") if rec.post else b""
+    if post and not any(k.lower() == "content-length" for k in rq):
+        rq["Content-Length"] = str(len(post))
+    raw_req = (f"{req['method']} {path} HTTP/1.1\r\n" + "".join(f"{k}: {v}\r\n" for k, v in rq.items())
+               + "\r\n").encode("latin-1", "replace") + post
+    status = int(resp.get("status") or 0)
+    rh: list[tuple[str, str]] = []
+    for k, v in {**(resp.get("headers") or {}), **(rec.extra_resp or {})}.items():
+        if k.startswith(":") or k.lower() in ("content-encoding", "transfer-encoding", "content-length"):
+            continue
+        for line in str(v).split("\n"):
+            rh.append((k, line))
+    # DevTools hands back the body already decoded, so the encoding header is dropped
+    rh.append(("Content-Length", str(len(rec.body))))
+    head = f"HTTP/1.1 {status} {resp.get('statusText') or ''}\r\n" + "".join(f"{k}: {v}\r\n" for k, v in rh) + "\r\n"
+    raw_resp = head.encode("latin-1", "replace") + rec.body
+    item = Element("item")
+    low = {k.lower(): v for k, v in (resp.get("headers") or {}).items()}
+    for tag, val in (("method", req["method"]), ("host", u.hostname.lower()), ("port", str(port)),
+                     ("protocol", u.scheme), ("path", path), ("status", str(status)),
+                     ("mimetype", _burp_mime(low.get("content-type", resp.get("mimeType", ""))))):
+        SubElement(item, tag).text = val
+    SubElement(item, "request", {"base64": "true"}).text = base64.b64encode(raw_req).decode()
+    SubElement(item, "response", {"base64": "true"}).text = base64.b64encode(raw_resp).decode()
+    return item
+
+
 class BrowserCrawler(Crawler):
     """Crawl with a real browser; fall back to nothing silently (see make_crawler)."""
 
-    def __init__(self, cfg: CrawlConfig, chrome: str):
+    def __init__(self, cfg: CrawlConfig, chrome: str, attach: str | None = None):
         super().__init__(cfg)
         self.chrome = chrome
+        # `attach`: the DevTools URL of a browser someone is using (`browse --active`). The crawl
+        # then runs in a background tab of that browser, sharing its login, and leaves it open.
+        self.attach = attach
+        self.target: str | None = None
         self.proc = None
         self.tmp = None
         self.cdp: CDP | None = None
@@ -386,6 +432,10 @@ class BrowserCrawler(Crawler):
 
     # ------------------------------------------------------------ lifecycle --
     def _launch(self) -> None:
+        if self.attach:
+            self.cdp = CDP(WebSocket(self.attach))
+            self.cdp.urgent = self._handle
+            return
         self.tmp = tempfile.mkdtemp(prefix="b2m-chrome-")
         extra = ["--window-size=1366,900", "--disable-popup-blocking"]
         if self.cfg.insecure:
@@ -407,6 +457,11 @@ class BrowserCrawler(Crawler):
         return None
 
     def _close(self) -> None:
+        try:
+            if self.cdp and self.attach and self.target:
+                self.cdp.call("Target.closeTarget", {"targetId": self.target}, timeout=5)
+        except Exception:
+            pass
         try:
             if self.cdp:
                 self.cdp.ws.close()
@@ -434,11 +489,12 @@ class BrowserCrawler(Crawler):
 
     def _setup(self) -> None:
         c = self.cdp
-        try:
-            c.call("Browser.setDownloadBehavior", {"behavior": "deny"})
-        except RuntimeError:
-            pass
-        tid = c.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+        if not self.attach:                     # never change the downloads of someone's own browser
+            try:
+                c.call("Browser.setDownloadBehavior", {"behavior": "deny"})
+            except RuntimeError:
+                pass
+        tid = self.target = c.call("Target.createTarget", {"url": "about:blank", "background": True})["targetId"]
         self.session = c.call("Target.attachToTarget", {"targetId": tid, "flatten": True})["sessionId"]
         for dom in ("Page", "Network", "Runtime"):
             self._page(f"{dom}.enable")
@@ -586,46 +642,13 @@ class BrowserCrawler(Crawler):
 
     # ------------------------------------------------------------- recording --
     def _to_item(self, rec: _Rec) -> Element | None:
-        req, resp = rec.req, rec.resp
-        if not req or not resp:
+        item = rec_to_item(rec, self.in_scope)
+        if item is None:
             return None
-        u = urllib.parse.urlsplit(req["url"])
-        if u.scheme not in ("http", "https") or not self.in_scope(req["url"]):
-            return None
-        port = u.port or (443 if u.scheme == "https" else 80)
-        path = (u.path or "/") + ("?" + u.query if u.query else "")
-        rq = dict(req.get("headers") or {})
-        rq.update(rec.extra_req or {})
-        rq = {k: v for k, v in rq.items() if not k.startswith(":")}
-        if not any(k.lower() == "host" for k in rq):
-            rq = {"Host": u.netloc, **rq}
-        post = (rec.post or "").encode("utf-8", "replace") if rec.post else b""
-        if post and not any(k.lower() == "content-length" for k in rq):
-            rq["Content-Length"] = str(len(post))
-        raw_req = (f"{req['method']} {path} HTTP/1.1\r\n" + "".join(f"{k}: {v}\r\n" for k, v in rq.items())
-                   + "\r\n").encode("latin-1", "replace") + post
-        status = int(resp.get("status") or 0)
-        rh: list[tuple[str, str]] = []
-        for k, v in {**(resp.get("headers") or {}), **(rec.extra_resp or {})}.items():
-            if k.startswith(":") or k.lower() in ("content-encoding", "transfer-encoding", "content-length"):
-                continue
-            for line in str(v).split("\n"):
-                rh.append((k, line))
-        # DevTools hands back the body already decoded, so the encoding header is dropped
-        rh.append(("Content-Length", str(len(rec.body))))
-        head = f"HTTP/1.1 {status} {resp.get('statusText') or ''}\r\n" + "".join(f"{k}: {v}\r\n" for k, v in rh) + "\r\n"
-        raw_resp = head.encode("latin-1", "replace") + rec.body
-        item = Element("item")
-        low = {k.lower(): v for k, v in (resp.get("headers") or {}).items()}
-        for tag, val in (("method", req["method"]), ("host", u.hostname.lower()), ("port", str(port)),
-                         ("protocol", u.scheme), ("path", path), ("status", str(status)),
-                         ("mimetype", _burp_mime(low.get("content-type", resp.get("mimeType", ""))))):
-            SubElement(item, tag).text = val
-        SubElement(item, "request", {"base64": "true"}).text = base64.b64encode(raw_req).decode()
-        SubElement(item, "response", {"base64": "true"}).text = base64.b64encode(raw_resp).decode()
-        ct = low.get("content-type", resp.get("mimeType", "")).lower()
+        low = {k.lower(): v for k, v in (rec.resp.get("headers") or {}).items()}
+        ct = low.get("content-type", rec.resp.get("mimeType", "")).lower()
         if rec.body and ("javascript" in ct or "html" in ct) and len(self._scripts) < 400:
-            self._scripts.append((req["url"], rec.body.decode("utf-8", "replace")))
+            self._scripts.append((rec.req["url"], rec.body.decode("utf-8", "replace")))
         return item
 
     def _drain(self) -> None:
@@ -839,7 +862,8 @@ class BrowserCrawler(Crawler):
             self._sync_cookies()
         finally:
             self._close()
-        self._static_pass()
+        if not self.attach:                     # attached: the browser's own cookies are not ours to copy
+            self._static_pass()
         return CrawlResult(self.items, self.stats, self.forms, self.scope, self.screenshot)
 
     # ------------------------------------------------------------ journeys ---

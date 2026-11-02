@@ -63,6 +63,26 @@ _ASSET_TAGS = {"script": "src", "link": "href", "img": "src", "source": "src", "
                "audio": "src", "embed": "src", "track": "src"}
 
 
+def in_scope(url: str, scope: list[str]) -> bool:
+    """Whether a URL is in scope: `host`, `host:port`, or `*.domain` (the domain and every subdomain)."""
+    u = urllib.parse.urlsplit(url)
+    if u.scheme not in ("http", "https") or not u.hostname:
+        return False
+    host = u.hostname.lower()
+    port = u.port or (443 if u.scheme == "https" else 80)
+    for s in scope:
+        if s.startswith("*."):
+            if host == s[2:] or host.endswith(s[1:]):
+                return True
+        elif ":" in s and not s.endswith("]"):
+            sh, _, sp = s.rpartition(":")
+            if host == sh and str(port) == sp:
+                return True
+        elif host == s:
+            return True
+    return False
+
+
 @dataclass
 class CrawlConfig:
     start: str
@@ -232,22 +252,7 @@ class Crawler:
         return scope
 
     def in_scope(self, url: str) -> bool:
-        u = urllib.parse.urlsplit(url)
-        if u.scheme not in ("http", "https") or not u.hostname:
-            return False
-        host = u.hostname.lower()
-        port = u.port or (443 if u.scheme == "https" else 80)
-        for s in self.scope:
-            if s.startswith("*."):
-                if host == s[2:] or host.endswith(s[1:]):
-                    return True
-            elif ":" in s and not s.endswith("]"):
-                sh, _, sp = s.rpartition(":")
-                if host == sh and str(port) == sp:
-                    return True
-            elif host == s:
-                return True
-        return False
+        return in_scope(url, self.scope)
 
     # ----------------------------------------------------------------- fetch --
     def _wait(self) -> None:

@@ -99,7 +99,7 @@ def _build_from(args, exchanges: list, stats: dict, staged: str | None = None) -
 
 
 def _write_outputs(args, outdir: str, replace_build: int | None = None, quiet: bool = False) -> int:
-    """Build the model from every saved input and write every output. `serve` calls this on each
+    """Build the model from every saved input and write every output. `browse` calls this on each
     rebuild with `quiet` and the build to overwrite; the build id and counts are left on `args`."""
     all_ex, all_stats, merged = _load_inputs(outdir)
 
