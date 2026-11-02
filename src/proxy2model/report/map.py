@@ -35,10 +35,10 @@ MAP_CSS = r"""
 .mbtn{font:600 12px var(--sans);padding:5px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--muted)}
 .mbtn:hover{color:var(--text)}
 .mbody{display:flex;flex:1;min-height:0}
-.mcv{position:relative;flex:1;min-width:0;background:radial-gradient(1200px 760px at 50% 42%,#ffffff,#edf0f5)}
+.mcv{position:relative;flex:1;min-width:0;background:radial-gradient(1200px 760px at 50% 42%,#fbf8f2,#efe8dc)}
 .mcv.dark{background:radial-gradient(1200px 760px at 50% 42%,#0d1118,#05070a)}
-.mcv.dark .mhud,.mcv.dark canvas.mini,.mcv.dark .mzoom button{background:#0e131a;border-color:#232b36;color:#98a4b3}
-.mcv.dark .mtip{background:#0e131a;border-color:#2a3340;color:#e8edf3}
+.mcv.dark .mhud,.mcv.dark canvas.mini,.mcv.dark .mzoom button{background:#100e0b;border-color:#24201a;color:#a39a8d}
+.mcv.dark .mtip{background:#100e0b;border-color:#332d25;color:#f3ece0}
 .mcv canvas.main{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
 .mcv canvas.main.drag{cursor:grabbing}.mcv canvas.main.hit{cursor:pointer}
 .mcv canvas.mini{position:absolute;right:14px;bottom:14px;width:170px;height:110px;border:1px solid var(--line2);border-radius:10px;background:var(--panel);opacity:.94;cursor:pointer;box-shadow:var(--shadow)}
@@ -168,7 +168,7 @@ function initGraph(){
   const cs=getComputedStyle(document.documentElement);
   const col=v=>{const m=/^var\((--[\w-]+)\)$/.exec(v);return m?cs.getPropertyValue(m[1]).trim():v;};
   let C={},CV={};const readTheme=()=>{["text","muted","faint","line","line2","panel","panel2","ink","signal","observed","inferred","ok","warn","bad","l6"].forEach(k=>C[k]=cs.getPropertyValue("--"+k).trim());CAT.forEach(c=>c._c=col(c.color));
-    CV=mapDark()?{bg:"#06080c",edge:"#aeb6c4",lab:"#e8edf3",labm:"#a3adbb",halo:"#06080c",ghost:"#06080c",ring:"#ffffff"}:{bg:"#ffffff",edge:"#6b7685",lab:"#141924",labm:"#566170",halo:"#ffffff",ghost:"#ffffff",ring:"#141924"};if(wrap)wrap.classList.toggle("dark",mapDark());};
+    CV=mapDark()?{bg:"#0b0a08",edge:"#b5ab9c",lab:"#f3ece0",labm:"#a39a8d",halo:"#0b0a08",ghost:"#0b0a08",ring:"#ffffff"}:{bg:"#fbf8f2",edge:"#7a7064",lab:"#0b0a08",labm:"#5f584e",halo:"#fbf8f2",ghost:"#fbf8f2",ring:"#0b0a08"};if(wrap)wrap.classList.toggle("dark",mapDark());};
   readTheme();
   const themeObs=new MutationObserver(()=>{readTheme();dirty=true;});themeObs.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
   const ICONP={};const iconPath=t=>ICONP[t]||(ICONP[t]=new Path2D(ICON[t]||ICON.endpoint));

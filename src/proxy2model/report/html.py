@@ -352,30 +352,31 @@ def write_html_report(m: Model, path: str, osint: dict | None = None,
 
 
 _TEMPLATE = r"""<!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 21.5 16 26l10-4.5' fill='none' stroke='%230e8fd6' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M6 16.5 16 21l10-4.5' fill='none' stroke='%237a5cff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M16 6 6 10.5 16 15l10-4.5z' fill='%23e85002'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect x='8' y='8' width='496' height='496' rx='88' fill='%231c0f07' stroke='%236a2805' stroke-width='16'/%3E%3Cpath d='M37 39.5 L72 39.5 L26.5 66.5 Q43 51 46 49 Q39 45 37 39.5 Z' transform='translate(-25.4 -50.1) scale(5.75)' fill='%23f16001'/%3E%3C/svg%3E">
 <title>proxy2model report</title>
 <style>
 __FONTCSS__
 :root{
---ink:#fff;--panel:#fff;--panel2:#f7f8fa;--panel3:#fafbfc;--line:#e7eaef;--line2:#cfd5dd;
---text:#141924;--muted:#6b7580;--faint:#98a1ac;--signal:#e85002;--signal-soft:#fdece3;
---observed:#0e8fd6;--inferred:#7a5cff;--ok:#0fa79a;--warn:#c9820a;--bad:#d64545;--hot:#e85002;
---l1:#7a8794;--l2:#0fa79a;--l3:#7a5cff;--l4:#0e8fd6;--l5:#3a424e;--l6:#e85002;
+/* light: the field-notes paper. dark (the default) is the same ink as the README art */
+--ink:#f6f1e9;--panel:#fbf8f2;--panel2:#f2ece2;--panel3:#f7f2ea;--line:#e2d9ca;--line2:#d3c7b4;
+--text:#0b0a08;--muted:#5f584e;--faint:#8a8174;--signal:#d94a00;--signal-soft:#fbe6d8;
+--observed:#2f6f93;--inferred:#6b4fb3;--ok:#4f7d3a;--warn:#a8700a;--bad:#c23b2b;--hot:#d94a00;
+--l1:#8a8174;--l2:#4f7d3a;--l3:#6b4fb3;--l4:#2f6f93;--l5:#3a342c;--l6:#d94a00;
 --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 --shadow:0 8px 30px -12px rgba(20,25,36,.22);--radius:12px;
 }
 html[data-theme="dark"]{
---ink:#0c0f14;--panel:#11151c;--panel2:#141922;--panel3:#0f131a;--line:#222a36;--line2:#2e3846;
---text:#e6edf3;--muted:#93a0b0;--faint:#5f6b7a;--signal:#ff6a1a;--signal-soft:#2a1608;
---observed:#39d0ff;--inferred:#a594ff;--ok:#3fd6c3;--warn:#e2b23c;--bad:#ff6b6b;--hot:#ff6a1a;
---l1:#8a97a6;--l2:#3fd6c3;--l3:#a594ff;--l4:#39d0ff;--l5:#c0cad6;--l6:#ff6a1a;
+--ink:#0b0a08;--panel:#100e0b;--panel2:#17140f;--panel3:#0e0c0a;--line:#24201a;--line2:#332d25;
+--text:#f3ece0;--muted:#a39a8d;--faint:#6f6a61;--signal:#e85002;--signal-soft:#2a1406;
+--observed:#79aecb;--inferred:#b49be0;--ok:#8fbf7a;--warn:#d9a441;--bad:#e5604f;--hot:#e85002;
+--l1:#8a8174;--l2:#8fbf7a;--l3:#b49be0;--l4:#79aecb;--l5:#ded2c0;--l6:#e85002;
 --shadow:0 12px 40px -16px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box}
@@ -590,7 +591,7 @@ __TYPECSS__
 </head>
 <body>
 <header>
-  <div class="logo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 21.5 16 26l10-4.5" fill="none" stroke="var(--observed)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 16.5 16 21l10-4.5" fill="none" stroke="var(--inferred)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 6 6 10.5 16 15l10-4.5z" fill="var(--signal)"/></svg><span>proxy<b>2</b>model</span></div>
+  <div class="logo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect x="8" y="8" width="496" height="496" rx="88" fill="#1c0f07" stroke="#6a2805" stroke-width="16"/><path d="M37 39.5 L72 39.5 L26.5 66.5 Q43 51 46 49 Q39 45 37 39.5 Z" transform="translate(-25.4 -50.1) scale(5.75)" fill="#f16001"/></svg><span>proxy<b>2</b>model</span></div>
   <div class="crumbs" id="crumbs"></div>
   <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="q" type="search" placeholder="Search endpoints, hosts, params, evidence…" aria-label="Search"></div>
