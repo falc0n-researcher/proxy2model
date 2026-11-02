@@ -10,10 +10,16 @@ proxy2model is the new name of burp2model. Its history up to 1.3.0 is in
 - **`browse`: record your own browser.** Opens Chrome with a fresh profile, asks for the URL, scope
   (`*.example.com`) and mode, and records every in-scope request of every tab, popup, frame and
   worker while you use the app. The model rebuilds as you go. **Active** mode also crawls in a
-  background tab of the same browser, sharing your login, with the crawler's guard rails.
+  background tab of the same browser, sharing your login, GET only unless `--allow-writes`. It asks
+  for a role, can keep the login between sessions (`--keep-login`), skips images, fonts and
+  stylesheets, records WebSocket handshakes, and ends with the code-only endpoints to visit next.
 - **MCP server.** `mcp` serves built models to an AI agent (Claude Code, Claude Desktop, Cursor ...)
   with the same cited answers as the CLI. Read-only.
-- **OpenAPI.** Every build writes `openapi.json`; `openapi` exports it on demand.
+- **OpenAPI.** Every build writes `openapi.json`, with response schemas read from JSON bodies;
+  `openapi` exports it on demand.
+- **Less noise.** Bot-detection and challenge posts (Akamai, Cloudflare, PerimeterX, Kasada, Imperva)
+  are not counted as endpoints. A reference whose base URL is a variable is shown as `{base}/...`
+  instead of being pinned to the page's host.
 - **Parameter value types.** Each parameter records the kinds of value it was seen with
   (jwt, uuid, email, integer, number, boolean, base64, string), read before masking. Items of a JSON
   array share one name (`$.events[].id`) instead of one parameter per item.

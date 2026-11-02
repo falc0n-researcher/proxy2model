@@ -275,7 +275,13 @@ def main(argv=None) -> int:
     bw.add_argument("--role", type=_name("--role"), help="tag this session's traffic with a role")
     bw.add_argument("--fresh", action="store_true",
                     help="discard every saved input (earlier builds and sessions) first")
-    bw.add_argument("--read-only", action="store_true", help="active crawl: never send anything but GET")
+    bw.add_argument("--allow-writes", action="store_true",
+                    help="active crawl: also let through the POST/PUT/DELETE the app itself sends "
+                         "(by default the crawl tab sends GET only, since it shares your login)")
+    bw.add_argument("--keep-login", dest="keep_login", action="store_true", default=None,
+                    help="keep the browser profile (and its login) for the next session; it holds real "
+                         "cookies and lives in ~/.config/proxy2model/profiles/, outside the output")
+    bw.add_argument("--no-open", dest="open", action="store_false", help="do not open the report when done")
     bw.add_argument("--max-requests", type=int, default=3000, metavar="N",
                     help="active crawl: stop after N requests (default: 3000; 0 = no limit)")
     bw.add_argument("--max-seconds", type=float, default=0, metavar="SEC", help="active crawl: time limit")

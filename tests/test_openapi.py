@@ -119,3 +119,49 @@ def test_openapi_cli_round_trips_through_model_json(tmp_path, capsys):
     # model.json keeps the type labels, so a reload exports the same schemas
     with open(f"{out}/shop/model.json") as f:
         assert to_openapi(from_dict(json.load(f)))["paths"] == spec["paths"]
+
+
+def har(tmp_path, entries):
+    p = tmp_path / "t.har"
+    p.write_text(json.dumps({"log": {"version": "1.2", "entries": entries}}))
+    return build(list(parse_items(str(p))), name="t")
+
+
+def test_response_fields_become_response_schemas(tmp_path):
+    e = entry("GET", "https://api.shop.test/api/me", 200)
+    e["response"]["content"]["text"] = json.dumps({
+        "id": 7, "email": "bob@shop.test", "admin": False, "score": 1.5, "token": JWT,
+        "tags": [{"name": "x"}], "byUser": {"alice@shop.test": 1}, "note": None})
+    m = har(tmp_path, [e])
+    doc = to_openapi(m)
+    schema = doc["paths"]["/api/me"]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
+    props = schema["properties"]
+    assert props["id"] == {"type": "integer"} and props["admin"] == {"type": "boolean"}
+    assert props["score"] == {"type": "number"} and props["email"]["format"] == "email"
+    assert props["tags"]["items"]["properties"]["name"]["type"] == "string"
+    assert props["byUser"]["additionalProperties"] == {"type": "integer"}   # a key that is a value: any key
+    assert "note" not in props                                            # null says nothing about a type
+    text = json.dumps(doc) + json.dumps(m.nodes, default=str)
+    assert "bob@shop.test" not in text and "alice@shop.test" not in text and JWT not in text
+
+
+def test_bot_detection_posts_are_not_apis(tmp_path):
+    akamai = entry("POST", "https://www.shop.test/aB3dE/Xy9/dyB-VF8vAQ/CX/1gGXUINSE", 201)
+    akamai["request"]["postData"] = {"mimeType": "text/plain", "text": '{"sensor_data":"2;0;3;..."}'}
+    cf = entry("POST", "https://www.shop.test/cdn-cgi/challenge-platform/h/b/jsd/r/abc", 200)
+    m = har(tmp_path, [akamai, cf, entry("GET", "https://www.shop.test/api/real", 200)])
+    labels = {n.label for n in m.nodes.values() if n.type == "endpoint"}
+    assert labels == {"GET /api/real"}
+    assert m.stats["bot_detection_requests"] == 2
+
+
+def test_a_variable_base_url_is_not_pinned_to_the_page_host(tmp_path):
+    js = entry("GET", "https://www.shop.test/app.js", 200)
+    js["response"]["headers"] = h(Content_Type="application/javascript")
+    js["response"]["content"] = {"mimeType": "application/javascript", "text":
+        'fetch(`${this.apiHost}/v1/accounts:signInWithPassword`, {method: "POST"}); fetch("/api/orders")'}
+    m = har(tmp_path, [js])
+    eps = {n.label: n.attrs["host"] for n in m.nodes.values() if n.type == "endpoint"}
+    assert eps["POST {base}/v1/accounts:signInWithPassword"] == "{base}"
+    assert eps["* /api/orders"] == "www.shop.test"
+    assert all("{base}" not in p for p in to_openapi(m, include_static=True)["paths"])

@@ -32,17 +32,27 @@ proxy2model browse
 ```
 
 It asks for the app's URL, the scope (default `*.<its domain>`: the domain and its subdomains), a
-name for the model, and the mode:
+name for the model, the mode, a role, and whether to keep the login:
 
 - **passive** records only what you do.
 - **active** also crawls the app in a background tab of the same browser, so it shares your login.
-  It stays in scope, never clicks logout- or delete-looking controls and never submits a password
-  form. Only for apps you are authorized to test.
+  Because it does, the crawl sends GET only; `--allow-writes` lets through the POST/PUT/DELETE the
+  app itself sends. It stays in scope, never clicks logout- or delete-looking controls and never
+  submits a password form. Only for apps you are authorized to test.
+- **role** (`anon`, `user`, `admin` ...) tags the session, so `cross-role` can compare them.
+- **keep the login** (`--keep-login`) keeps the browser profile in
+  `~/.config/proxy2model/profiles/<app>[-<role>]`, so the next session starts signed in. It holds
+  real cookies, outside the output folder; delete it to log out. Without it the profile is fresh
+  and deleted when you finish.
 
 Every tab, popup, frame and worker is recorded from its first request; nothing out of scope is
-recorded, and nothing is blocked. Close the window (or Ctrl-C) to finish: the last build prints
-where the report is. Each exchange is masked on arrival and only the masked record is saved
-(`inputs/browse.jsonl`), so the next session adds to the same model.
+recorded, and nothing is blocked. Images, fonts and stylesheets are not recorded. A WebSocket is
+recorded as its handshake; its messages are counted, not modelled.
+
+Close the window (or Ctrl-C) to finish. The last build lists the endpoints the app's code names that
+you have not reached yet (**visit next**) and opens the report (`--no-open` to skip). Each exchange
+is masked on arrival and only the masked record is saved (`inputs/browse.jsonl`), so the next
+session adds to the same model.
 
 Everything can go on the command line instead:
 
@@ -50,8 +60,7 @@ Everything can go on the command line instead:
 proxy2model browse https://app.example.com --scope '*.example.com' -w shop --active --yes --role user
 ```
 
-Needs Chrome, Chromium, Edge or Brave (found automatically, or `--chrome PATH`). The browser uses a
-fresh profile that is deleted afterwards.
+Needs Chrome, Chromium, Edge or Brave (found automatically, or `--chrome PATH`).
 
 ## Roles
 

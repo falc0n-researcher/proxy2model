@@ -19,6 +19,10 @@ From each body (up to 10 MB; larger scripts raise `SCRIPT_PARTIALLY_SCANNED`) it
 - API references in JavaScript: `fetch`, `axios`-style calls, `XHR.open`, template literals, string concatenation, absolute URLs
 - form targets and inline scripts in HTML
 - cookie names and flags, credential kinds sent, tech headers, GraphQL operation names
+- the fields of JSON responses, as names and types (`$.user.id`: integer); a key that looks like a value becomes `{key}`
+
+Posts from bot-detection and challenge vendors (Akamai, Cloudflare, PerimeterX, Kasada, Imperva) to the app's
+own host are kept as evidence but are not endpoints.
 
 ## 2. Redact
 
@@ -67,7 +71,9 @@ Code references are matched to observed endpoints by templated path, then method
 - `STATIC_ONLY`: in the code, never called in the capture
 - `RUNTIME_ONLY`: observed, with no code reference found
 
-A reference whose method cannot be read is shown as `*`, never guessed as `GET`.
+A reference whose method cannot be read is shown as `*`, never guessed as `GET`. A reference whose
+base URL is a variable in the code (`${apiHost}/v1/accounts`) is shown as `{base}/v1/accounts`, never
+pinned to the page's host, and left out of OpenAPI.
 
 ## 6. Unknowns
 
@@ -95,7 +101,7 @@ Every claim cites an evidence id (`ev_1`, `ev_2`, ... numbered from 1). The repo
 - `graph.db`: the model as a SQLite graph, queried with [BQL](querying.md).
 - `report.html`: an offline, self-contained report.
 - `context.json`: the package for an AI. See [ai.md](ai.md).
-- `openapi.json`: the observed API as OpenAPI 3.0.
+- `openapi.json`: the observed API as OpenAPI 3.0, with a response schema wherever a JSON body was seen.
 - `model.json`, `inputs/`, and `exports/` (graph.json, graph.graphml, build.svg).
 
 ## 9. OSINT

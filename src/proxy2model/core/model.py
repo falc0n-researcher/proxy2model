@@ -26,6 +26,7 @@ from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass, field
 
 from .domains import registrable_domain  # noqa: F401  (re-exported)
+from ..ingest.extract import VAR_BASE
 from ..ingest.parse import Exchange, ev_pack, ev_unpack
 
 API_HINT = re.compile(r"/(api|v\d+|graphql|rest|gql)(/|$)", re.I)
@@ -248,6 +249,8 @@ def classify(ex: Exchange) -> str:
     """script | asset | preflight | route | endpoint for a first-party exchange."""
     if ex.preflight:
         return "preflight"
+    if ex.status == 101:
+        return "endpoint"          # a WebSocket (or other protocol switch) handshake
     if _is_js(ex):
         return "script"
     if _is_static_asset(ex) and ex.method in ("GET", "HEAD"):
@@ -428,6 +431,9 @@ def build(exchanges: list[Exchange], name: str, seed_host: str | None = None,
         if is_probe(ex):                 # a scanner's payload: evidence yes, a node in the app's map no
             m.stats["probe_requests"] = m.stats.get("probe_requests", 0) + 1
             continue
+        if ex.beacon:                    # a bot-detection vendor's sensor post: evidence yes, an API no
+            m.stats["bot_detection_requests"] = m.stats.get("bot_detection_requests", 0) + 1
+            continue
         if role:
             m.roles.add(role)
             m.add_node(f"role:{role}", "role", 5, f"role: {role}")
@@ -555,6 +561,13 @@ def build(exchanges: list[Exchange], name: str, seed_host: str | None = None,
                         pn.attrs["types"].sort()
                     m.evidence(pid, i)
                     m.add_edge(node.id, pid, "USES_PARAMETER", "OBSERVED", i)
+        if kind == "endpoint" and ex.resp_fields and ex.status is not None:
+            fields = node.attrs.setdefault("response_fields", {}).setdefault(str(ex.status), {})
+            for fname, ftype in ex.resp_fields:
+                types = fields.setdefault(fname, [])
+                if ftype not in types:
+                    types.append(ftype)
+                    types.sort()
 
     # A path that only ever answered 404/410 is not part of the app: a scanner or a typo asked
     # for something that is not there. Keep the requests (they are evidence), drop the nodes.
@@ -607,6 +620,9 @@ def build(exchanges: list[Exchange], name: str, seed_host: str | None = None,
             base_host = (ex.referer_host if ex.referer_host and in_scope(ex.referer_host, m.scope)
                          else primary)
         for method, host, path, _ref_kind in ex.js_refs:
+            var_base = host == VAR_BASE
+            if var_base:
+                host = None                 # matched against any host; never pinned to the page's
             if host and not in_scope(host, m.scope):
                 tp_id = f"host:{host}"
                 m.add_node(tp_id, "third_party", 5, host, scope="external", requests=0)
@@ -624,7 +640,7 @@ def build(exchanges: list[Exchange], name: str, seed_host: str | None = None,
                     m.evidence(nid, i)
                     m.add_edge(src, nid, "REFERENCES", "INFERRED", i)
                 continue
-            target_host = host or base_host
+            target_host = VAR_BASE if var_base else host or base_host
             meth = method or "*"
             eid = f"endpoint:{meth}:{target_host}:{path}"
             prefix = "" if target_host == primary else target_host

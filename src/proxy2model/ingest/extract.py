@@ -23,6 +23,10 @@ from .redact import template_path
 # Bodies larger than this are scanned only up to the cap and flagged.
 MAX_SCAN_BYTES = 10 * 1024 * 1024
 
+# Host of a reference whose base URL the code keeps in a variable (`${apiHost}/v1/accounts`):
+# the path is known, the host is not, so it is never pinned to the page's own host.
+VAR_BASE = "{base}"
+
 API_HINT = re.compile(r"/(api|v\d+|graphql|rest|gql)(/|$)", re.I)
 
 # `${expr}` inside template literals becomes a {param} placeholder.
@@ -53,8 +57,9 @@ _STATIC_EXT = re.compile(
 def _normalize(raw: str) -> tuple[str | None, str] | None:
     """Split a raw literal into (host, templated path); None if not a path."""
     raw = raw.strip()
-    if raw.startswith("{param}"):
-        raw = raw[len("{param}"):]          # unknown base URL: treat as relative
+    var_base = raw.startswith("{param}")
+    if var_base:
+        raw = raw[len("{param}"):]          # the base URL is a variable: the host is unknown
     if raw.startswith("//"):
         raw = "https:" + raw
     host = None
@@ -74,7 +79,7 @@ def _normalize(raw: str) -> tuple[str | None, str] | None:
     # `"/api/users/" + id` — a trailing slash is a concatenation point
     if len(path) > 1 and path.endswith("/"):
         path = path + "{param}"
-    return host, template_path(path)
+    return host or (VAR_BASE if var_base else None), template_path(path)
 
 
 def _ref(method, raw, kind, out: set) -> None:
@@ -82,13 +87,13 @@ def _ref(method, raw, kind, out: set) -> None:
     if norm is None:
         return
     host, path = norm
-    if path == "/" and host is None:
+    if path == "/" and host in (None, VAR_BASE):
         return
     # `${this.host}/${id}/reviews` — the base is a service prefix the bundle
     # keeps in a variable, so all that is left is `/{param}/reviews`. That is
     # not a path anything can be matched to; drop it rather than invent a
     # root-level endpoint (an API-looking segment after it keeps it: `/{t}/api/x`).
-    if host is None and path.startswith("/{param}") and not API_HINT.search(path):
+    if host in (None, VAR_BASE) and path.startswith("/{param}") and not API_HINT.search(path):
         return
     out.add((method.upper() if method else None, host, path, kind))
 

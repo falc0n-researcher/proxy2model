@@ -30,7 +30,7 @@ import zlib
 from dataclasses import dataclass, field
 from xml.etree.ElementTree import iterparse
 
-from .infer import param_types
+from .infer import param_types, value_type
 from .extract import MAX_SCAN_BYTES, extract_html_refs, extract_js_refs, extract_script_assets
 from ..core.stack import detect as detect_stack
 from .redact import (
@@ -106,6 +106,10 @@ class Exchange:
     preflight: bool = False
     # (location, name, type) read from the raw values before masking: labels only
     param_types: list[tuple] = field(default_factory=list)
+    # (name, type) of each field of a JSON response (`$.user.id`, "integer"): names and types only
+    resp_fields: list[tuple] = field(default_factory=list)
+    # a bot-detection or challenge vendor's own traffic (see _bot_beacon): evidence, not the app's API
+    beacon: str = ""
     # a fully redacted view of the exchange, for the report's request/response
     # panes: request line, headers and body all masked; values never present.
     # kept compressed (see ev_pack); `ev` reads and writes it as a dict
@@ -147,6 +151,7 @@ class Exchange:
             "scan_truncated": self.scan_truncated, "gql_ops": self.gql_ops,
             "preflight": self.preflight, "ev": self.ev,
             "param_types": [list(t) for t in self.param_types],
+            "resp_fields": [list(t) for t in self.resp_fields], "beacon": self.beacon,
         }
 
     @classmethod
@@ -170,6 +175,7 @@ class Exchange:
             scan_truncated=r.get("scan_truncated", False),
             gql_ops=r.get("gql_ops", []), preflight=r.get("preflight", False),
             param_types=[tuple(t) for t in r.get("param_types", [])],
+            resp_fields=[tuple(t) for t in r.get("resp_fields", [])], beacon=r.get("beacon", ""),
             ev_z=ev_pack(r.get("ev", {})),
         )
 
@@ -319,6 +325,62 @@ def _parse_body_params(body: str, content_type: str) -> list[tuple[str, str]]:
 
 
 _GQL_OP_RE = re.compile(r"^\s*(query|mutation|subscription)\s+([A-Za-z_][A-Za-z0-9_]*)")
+
+
+# Bot-detection and challenge vendors post their sensor data to the app's own host, often on a
+# random-looking path. Matched on the raw request; the label names the vendor, nothing more.
+_BEACON_PATHS = (
+    (re.compile(r"^/cdn-cgi/(challenge-platform|rum|bm/cv|trace)(/|$)"), "cloudflare"),
+    (re.compile(r"^/_sec/(cp_challenge|verify)"), "akamai"),
+    (re.compile(r"/api/v2/collector(/|$|\?)"), "perimeterx"),
+    (re.compile(r"^/_Incapsula_Resource"), "imperva"),
+)
+
+
+def _bot_beacon(path: str, req_headers, body: str) -> str:
+    if body[:200].lstrip().startswith('{"sensor_data"'):
+        return "akamai"
+    if any(k.lower().startswith("x-kpsdk-") for k, _ in req_headers):
+        return "kasada"
+    for rx, vendor in _BEACON_PATHS:
+        if rx.search(path):
+            return vendor
+    return ""
+
+
+_RESP_FIELDS_MAX = 200
+
+
+def _resp_fields(body: bytes, content_type: str) -> list[tuple[str, str]]:
+    """(JSONPath name, type) of each leaf of a JSON response. Types come from the raw values,
+    which are then dropped; object keys that look like values become `{key}`."""
+    head = body[:1].strip() if body else b""
+    if not body or len(body) > 2 * 1024 * 1024 or not ("json" in content_type.lower() or head in (b"{", b"[")):
+        return []
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return []
+    out: dict[str, str] = {}
+
+    def walk(obj, prefix="$", depth=0):
+        if depth > 8 or len(out) >= _RESP_FIELDS_MAX:
+            return
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                k = str(k)[:80]
+                key = k if value_type(k) == "string" and not classify_segment(k) else "{key}"
+                walk(v, f"{prefix}.{key}", depth + 1)
+        elif isinstance(obj, list):
+            for v in obj[:5]:
+                walk(v, f"{prefix}[]", depth + 1)
+        elif obj is not None:
+            t = ("boolean" if isinstance(obj, bool) else "integer" if isinstance(obj, int)
+                 else "number" if isinstance(obj, float) else value_type(str(obj)) or "string")
+            out.setdefault(prefix, t)
+
+    walk(data)
+    return sorted(out.items())
 
 
 def _gql_ops(path_template: str, body: str, ct: str) -> list[str]:
@@ -985,6 +1047,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
     resp_headers_r = [(k, scrub(v)) for k, v in resp_headers_r]
     raw_body_params = _parse_body_params(req_body_text, req_ct)
     ptypes = param_types("query", raw_query) + param_types("body", raw_body_params)
+    beacon = _bot_beacon(path, req_headers, req_body_text)
     query_r, s3 = redact_params(raw_query)
     body_params_r, s4 = redact_params(raw_body_params)
     query_r = [(k, scrub(v)) for k, v in query_r]
@@ -1022,6 +1085,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
     else:
         resp_body_r, s6 = redact_body(resp_body_b[:BODY_KEEP * 5].decode("utf-8", "replace"))
         resp_body_r = scrub(resp_body_r)[:BODY_KEEP]
+    resp_fields = [] if is_js or is_html else _resp_fields(resp_body_b, resp_ct)
 
     stack = detect_stack({k.lower(): v for k, v in resp_headers},
                          [c["name"] for c in set_cookies] + cookie_names, stack_text, red_path, is_js or is_html)
@@ -1081,5 +1145,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
         gql_ops=gql_ops,
         preflight=preflight,
         param_types=ptypes,
+        resp_fields=resp_fields,
+        beacon=beacon,
         ev_z=ev_pack(ev),
     )

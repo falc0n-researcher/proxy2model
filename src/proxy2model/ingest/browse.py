@@ -21,7 +21,8 @@ from .browser import _Rec, CDP, WebSocket, rec_to_item
 
 # targets whose traffic is the app's: tabs, popups, out-of-process frames, workers
 _RECORDED = frozenset({"page", "iframe", "worker", "shared_worker", "service_worker"})
-_NO_BODY = frozenset({"Image", "Font", "Media"})
+# images, fonts, media and stylesheets name no endpoint and carry no app logic: not recorded
+_SKIPPED = frozenset({"Image", "Font", "Media", "Stylesheet"})
 
 
 class Recorder(threading.Thread):
@@ -37,6 +38,9 @@ class Recorder(threading.Thread):
         self.recs: dict[tuple[str, str], _Rec] = {}
         self.done: list[_Rec] = []
         self.recorded = 0
+        self.assets_skipped = 0
+        self.sockets: dict[tuple[str, str], _Rec] = {}     # WebSocket handshakes being recorded
+        self.frames = 0
         self.error: str | None = None
 
     def run(self) -> None:
@@ -99,12 +103,18 @@ class Recorder(threading.Thread):
         if not sid or not m.startswith("Network."):
             return
         key = (sid, p.get("requestId", ""))
+        if m.startswith("Network.webSocket"):
+            self._socket(m, p, key)
+            return
         if m == "Network.requestWillBeSent":
             if p.get("redirectResponse") and key in self.recs:
                 old = self.recs.pop(key)
                 old.resp, old.redirect = p["redirectResponse"], True
                 self.done.append(old)
             if not self.in_scope(p["request"].get("url", "")):
+                return
+            if p.get("type") in _SKIPPED:
+                self.assets_skipped += 1
                 return
             rec = _Rec(key[1])
             rec.req, rec.rtype = p["request"], p.get("type", "")
@@ -126,14 +136,36 @@ class Recorder(threading.Thread):
         elif m == "Network.loadingFailed":
             self.recs.pop(key, None)
 
+    def _socket(self, m: str, p: dict, key) -> None:
+        """A WebSocket is recorded as its handshake (GET, 101); frames are only counted."""
+        if m == "Network.webSocketCreated":
+            url = p.get("url", "")
+            http_url = "https" + url[3:] if url.startswith("wss:") else "http" + url[2:] if url.startswith("ws:") else url
+            if self.in_scope(http_url):
+                rec = _Rec(key[1])
+                rec.req, rec.rtype = {"url": http_url, "method": "GET", "headers": {}}, "WebSocket"
+                self.sockets[key] = rec
+        elif key not in self.sockets:
+            return
+        elif m == "Network.webSocketWillSendHandshakeRequest":
+            self.sockets[key].req["headers"] = (p.get("request") or {}).get("headers") or {}
+        elif m == "Network.webSocketHandshakeResponseReceived":
+            rec = self.sockets[key]
+            rec.resp = p.get("response") or {}
+            rec.extra_req = rec.resp.get("requestHeaders") or None
+            self.done.append(rec)
+        elif m in ("Network.webSocketFrameSent", "Network.webSocketFrameReceived"):
+            self.frames += 1
+        elif m == "Network.webSocketClosed":
+            self.sockets.pop(key, None)
+
     def _body(self, sid: str, rec: _Rec) -> None:
-        if rec.rtype not in _NO_BODY:
-            r = self._call("Network.getResponseBody", {"requestId": rec.id}, sid, 15)
-            body = r.get("body", "")
-            try:
-                rec.body = (base64.b64decode(body) if r.get("base64Encoded") else body.encode("utf-8", "replace"))
-            except ValueError:
-                rec.body = b""
-            rec.body = rec.body[: self.max_body]
+        r = self._call("Network.getResponseBody", {"requestId": rec.id}, sid, 15)
+        body = r.get("body", "")
+        try:
+            rec.body = (base64.b64decode(body) if r.get("base64Encoded") else body.encode("utf-8", "replace"))
+        except ValueError:
+            rec.body = b""
+        rec.body = rec.body[: self.max_body]
         if rec.req.get("hasPostData") and rec.post is None:
             rec.post = self._call("Network.getRequestPostData", {"requestId": rec.id}, sid, 5).get("postData")
