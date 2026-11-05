@@ -859,16 +859,35 @@ def _ok(statuses) -> bool:
     return any(200 <= s < 300 for s in statuses or [])
 
 
-def cross_role(m: Model, low: str, high: str) -> dict:
-    """Compare what a low and a high role reached. Output is hypotheses.
+# the authorization question each kind of divergence raises, named the way an API tester names it
+CROSS_ROLE_FAMILY = {
+    "low_reached_privileged": "function-level authorization (OWASP API5)",
+    "object_reads": "object-level authorization (OWASP API1)",
+    "low_writes": "function-level authorization (OWASP API5)",
+    "high_only": "untested authorization",
+    "enforced": "a control: authorization held here",
+    "shared_same_success": "data exposure between roles (OWASP API3)",
+}
+_OBJECT_KEY = re.compile(r"\{(?:id|uuid|hash|code|token)\}")
+_WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
-    high_only                endpoints the high role reached that the low role
-                             never requested — replay each as the low role.
-    low_reached_privileged   endpoints the low role reached whose path looks
-                             privileged — check the response was meant for it.
-    shared_same_success      both roles got a 2xx — compare response content.
+
+def cross_role(m: Model, low: str, high: str) -> dict:
+    """Compare what a low and a high role reached. Output is hypotheses, never findings.
+
+    low_reached_privileged   the low role got through to a privileged-looking path.
+    object_reads             the low role got a 2xx from an endpoint keyed by an object id:
+                             ask for the high role's object as the low role (BOLA).
+    low_writes               the low role changed state (POST, PUT, PATCH, DELETE) and got a 2xx.
+    high_only                the high role reached it, the low role never tried: replay it.
+    enforced                 the low role got 401/403 where the high role got 2xx: the
+                             control to compare every other replay against.
+    shared_same_success      both roles got a 2xx: compare what each was shown.
+
+    Each entry carries `family` (the authorization question), `unknown` and a safe `next` check.
     """
     high_only, low_priv, shared = [], [], []
+    objects, writes, enforced = [], [], []
     ev_role = {e["id"]: e.get("role") for e in m.evidence_log.meta()}
 
     def evs(node, prefer_role):
@@ -886,27 +905,51 @@ def cross_role(m: Model, low: str, high: str) -> dict:
         entry = {"endpoint": node.label, "id": node.id,
                  "evidence": evs(node, low if rl else high),
                  "statuses": {r: sbr.get(r, []) for r in (low, high) if r in sbr}}
+        low_ok, high_ok = _ok(sbr.get(low)), _ok(sbr.get(high))
+        method = (node.attrs.get("method") or "").upper()
+        tag = lambda kind, **kw: {**entry, "kind": kind, "family": CROSS_ROLE_FAMILY[kind], **kw}
         if rh and not rl:
-            high_only.append({**entry, "kind": "high_only",
-                              "unknown": f"whether '{low}' can reach it",
-                              "next": f"replay as '{low}' and compare with '{high}'"})
+            high_only.append(tag("high_only",
+                                 unknown=f"whether '{low}' can reach it",
+                                 next=f"replay as '{low}' and compare with '{high}'"))
         elif rl and PRIV_RE.search(path):
-            low_priv.append({**entry, "kind": "low_reached_privileged",
-                             "unknown": "whether the low-role response was authorised or a leak",
-                             "next": f"compare '{low}' and '{high}' response bodies"})
-        elif rl and rh and _ok(sbr.get(low)) and _ok(sbr.get(high)):
-            shared.append({**entry, "kind": "shared_same_success",
-                           "unknown": "whether both roles see the same data",
-                           "next": "diff the two responses for role-specific fields"})
+            low_priv.append(tag("low_reached_privileged",
+                                unknown="whether the low-role response was authorised or a leak",
+                                next=f"compare '{low}' and '{high}' response bodies"))
+        elif rl and rh and low_ok and high_ok:
+            shared.append(tag("shared_same_success",
+                              unknown="whether both roles see the same data",
+                              next="diff the two responses for role-specific fields"))
+        if rl and low_ok and method in _WRITE_METHODS:
+            on_object = bool(_OBJECT_KEY.search(path))
+            writes.append(tag("low_writes",
+                              unknown=f"whether '{low}' may {method} here" + (" on a record it does not own" if on_object else ""),
+                              next=f"confirm in the app's design that '{low}' may {method} here; if not, "
+                                   f"repeat it as '{low}' on a test record you own"))
+        elif rl and low_ok and _OBJECT_KEY.search(path):
+            objects.append(tag("object_reads",
+                               unknown=f"whether '{low}' can open an object that belongs to '{high}'",
+                               next=(f"as '{low}', request an id seen in '{high}' traffic" if rh else
+                                     f"as '{low}', request an id that belongs to another test account")
+                                    + "; another account's data coming back is the gap, a 403/404 is the control working"))
+        if rl and rh and high_ok and any(s in (401, 403) for s in sbr.get(low, [])):
+            enforced.append(tag("enforced",
+                                unknown="whether every route to this data is guarded the same way",
+                                next=f"use this '{low}' response as the denial to compare other replays with"))
     key = lambda e: e["endpoint"]
-    high_only.sort(key=key)
-    low_priv.sort(key=key)
-    shared.sort(key=key)
+    for xs in (high_only, low_priv, shared, objects, writes, enforced):
+        xs.sort(key=key)
     return {"low": low, "high": high,
             "roles_present": sorted(m.roles),
             "surface": low_priv + high_only,
+            "headline": {"low_reached_privileged": len(low_priv), "object_reads": len(objects),
+                         "low_writes": len(writes), "high_only": len(high_only),
+                         "enforced": len(enforced), "shared_same_success": len(shared)},
             "low_reached_privileged": low_priv,
+            "object_reads": objects,
+            "low_writes": writes,
             "high_only": high_only,
+            "enforced": enforced,
             "shared_same_success": shared}
 
 

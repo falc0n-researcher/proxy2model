@@ -96,6 +96,18 @@ proxy2model cross-role shop --low user --high admin
 
 Rebuilding a role replaces only that role; a build without `--role`, or with `--fresh`, starts over.
 
+`cross-role` sorts every divergence into the authorization question it raises, each with the request
+that shows it and a safe next check:
+
+- **privileged-looking reached**: the low role got through to an admin-style path.
+- **object reads**: the low role read an object by id. Ask for another account's id as the low role (BOLA).
+- **writes**: the low role changed state (POST, PUT, PATCH, DELETE) and got a 2xx.
+- **untested**: only the high role tried it. Replay it as the low role.
+- **enforced**: 401/403 for the low role, 2xx for the high. The control to compare other replays with.
+- **both got 2xx**: compare what each role was shown.
+
+`--json` gives all of it with a `headline` count per intent; long sections stop at 10 unless `--all`.
+
 ---
 
 ### `//` Keep exporting

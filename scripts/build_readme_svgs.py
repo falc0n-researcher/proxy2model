@@ -24,7 +24,9 @@ OUT = os.path.join(ROOT, "assets", "readme")
 INK, EMBER, CREAM, BRIGHT, MUTED, FAINT, CARD = "#0b0a08", "#e85002", "#ded2c0", "#f6f1e9", "#a39a8d", "#6f6a61", "#100e0b"
 
 # from the four-role Juice Shop build: proxy2model samples/juiceshop-$r.xml -w juiceshop --role $r
-FIGURES = {"requests": 417, "endpoints": 104, "code_only": 16, "roles": 4, "paths": 68, "ops": 88, "masked": 79}
+FIGURES = {"requests": 417, "endpoints": 104, "code_only": 16, "roles": 4, "paths": 68, "ops": 88, "masked": 79,
+           # proxy2model cross-role juiceshop --low anon --high user; context.json against the decoded capture
+           "priv_reached": 2, "anon_writes": 2, "context_k": 37, "raw_k": 440}
 
 
 def font_face() -> str:
@@ -114,9 +116,9 @@ def hero() -> str:
             f'<rect x="72" y="345" width="54" height="20" rx="4" fill="none" stroke="{EMBER}" stroke-opacity="0.5"/>',
             f'<circle cx="83" cy="355" r="3" fill="{EMBER}"><animate attributeName="opacity" values="1;0.25;1" dur="1.8s" repeatCount="indefinite"/></circle>',
             f'<text x="91" y="359" fill="{EMBER}" font-size="10" font-weight="500" letter-spacing="1.5px">LOCAL</text>',
-            f'<text x="142" y="361" font-size="14.5"><tspan fill="{EMBER}">fa1c0n@recon ~ $</tspan><tspan fill="{CREAM}"> proxy2model juiceshop-*.xml -w juiceshop</tspan></text>',
-            f'<text x="1128" y="361" text-anchor="end" font-size="14.5" font-weight="500"><tspan fill="{BRIGHT}">{f["endpoints"]} endpoints</tspan>'
-            f'<tspan fill="{FAINT}"> &#183; </tspan><tspan fill="{BRIGHT}">{f["code_only"]} never called</tspan></text>',
+            f'<text x="142" y="361" font-size="14.5"><tspan fill="{EMBER}">fa1c0n@recon ~ $</tspan><tspan fill="{CREAM}"> proxy2model cross-role juiceshop --low anon --high user</tspan></text>',
+            f'<text x="1128" y="361" text-anchor="end" font-size="14.5" font-weight="500"><tspan fill="{BRIGHT}">{f["priv_reached"]} admin paths</tspan>'
+            f'<tspan fill="{FAINT}"> &#183; </tspan><tspan fill="{BRIGHT}">{f["anon_writes"]} anon writes</tspan></text>',
             mark(1000, 22, 1.9), "</g>"]
     return svg(w, h, "\n".join(body))
 
@@ -149,13 +151,12 @@ def ledger() -> str:
     w, h, gap, f = 1200, 250, 22, FIGURES
     cw = (w - 2 * gap) / 3
     cards = [
-        card(1, 0, cw, "001", "THE API, MAPPED", "Juice Shop, four roles", str(f["endpoints"]),
-             [f"endpoints from {f['requests']} captured", "requests, each with its proof"], ["API", "OPENAPI", "ROLES"],
-             f"{f['paths']} PATHS · {f['ops']} OPS"),
-        card(2, cw + gap, cw, "002", "WHAT NOBODY WALKED", "Named, never called", str(f["code_only"]),
-             ["endpoints the JavaScript names", "that the browsing never reached"], ["CODE", "LEADS"], "E.G. /REST/ADMIN", lit=True),
-        card(3, 2 * (cw + gap), cw, "003", "MASKED AT READ", "Proof without secrets", str(f["masked"]),
-             ["token, cookie and PII values", "masked before the first write"], ["TOKENS", "PII"], "0 WRITTEN"),
+        card(1, 0, cw, "001", "CROSS-ROLE", "Admin answered anonymous", "200",
+             ["from /rest/admin/application-", "configuration, request cited"], ["ROLES", "API5"], "EV_93"),
+        card(2, cw + gap, cw, "002", "CROSS-ROLE", "Anonymous changed a product", "PUT",
+             ["/api/Products/{id} returned 200", "with no login at all"], ["ROLES", "API5"], "EV_285", lit=True),
+        card(3, 2 * (cw + gap), cw, "003", "CONTEXT.JSON", "Hand an AI the model", f"{f['context_k']}k",
+             [f"tokens of cited evidence instead", f"of ~{f['raw_k']}k of raw traffic"], ["AI", "MCP"], "SECRETS MASKED"),
     ]
     return svg(w, h, f'<rect width="{w}" height="{h}" fill="none"/>\n' + "\n".join(cards))
 

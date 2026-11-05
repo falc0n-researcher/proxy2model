@@ -214,6 +214,7 @@ def main(argv=None) -> int:
     cr.add_argument("--high", required=True, type=_name("--high"),
                     help="the more-privileged role (as tagged with --role)")
     cr.add_argument("--json", action="store_true", help="print JSON instead of text")
+    cr.add_argument("--all", action="store_true", help="list every entry (long sections stop at 10)")
     cr.add_argument("--out", default="proxy2model-out",
                     help="output directory used at build time")
     cr.set_defaults(func=cmd_crossrole)

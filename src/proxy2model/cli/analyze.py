@@ -96,19 +96,31 @@ def cmd_crossrole(args) -> int:
         print(json.dumps(result, indent=2))
         return 0
 
-    def show(title, items):
-        print(f"{title} ({len(items)})")
-        for s in items:
+    lo, hi, h = args.low, args.high, result["headline"]
+    print(f"{lo} vs {hi}: {h['low_reached_privileged']} privileged-looking reached · "
+          f"{h['object_reads']} object reads to test · {h['low_writes']} writes by {lo} · "
+          f"{h['high_only']} untested · {h['enforced']} enforced\n")
+
+    def show(title, items, limit=None):
+        if not items:
+            return
+        print(f"{title} ({len(items)})  [{items[0]['family']}]")
+        for s in items[:limit]:
             ev = ", ".join(f"ev_{e}" for e in s["evidence"])
             st = " ".join(f"{r}={v}" for r, v in s["statuses"].items())
             print(f"  {s['endpoint']:<44} {ev}  {st}")
             print(f"    unknown: {s['unknown']} · next: {s['next']}")
+        if limit and len(items) > limit:
+            print(f"  ... {len(items) - limit} more (--json for all)")
         print()
 
-    show(f"'{args.low}' reached privileged-looking endpoints", result["low_reached_privileged"])
-    show(f"'{args.high}' reached, '{args.low}' never tried", result["high_only"])
-    show("both roles got 2xx", result["shared_same_success"])
-    print("Each is a hypothesis, not a finding.")
+    show(f"'{lo}' reached privileged-looking endpoints", result["low_reached_privileged"])
+    show(f"'{lo}' read objects by id", result["object_reads"])
+    show(f"'{lo}' changed state", result["low_writes"])
+    show(f"'{hi}' reached, '{lo}' never tried", result["high_only"], limit=None if args.all else 10)
+    show(f"denied to '{lo}', allowed to '{hi}'", result["enforced"])
+    show("both roles got 2xx", result["shared_same_success"], limit=None if args.all else 10)
+    print("Each is a hypothesis to verify in an authorised session, not a finding.")
     return 0
 
 

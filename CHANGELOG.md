@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **`cross-role` names the authorization question.** Besides privileged-looking paths reached and
+  what only the higher role tried, it lists objects the lower role read by id (BOLA questions),
+  state it changed, and where it was denied (the control), each tagged with its family (OWASP API1,
+  API5, API3) and a safe next check. A one-line headline counts each; `--all` lists every entry.
+- **`./demo.sh` is the Juice Shop walk-through** from a fresh clone, with nothing to install: four
+  roles built, anonymous compared with a user, the login's new surface diffed, the report opened.
+- The README leads with the demo, cross-role, `context.json` for AI, and diff.
+
 ## 2.0.1
 
 Masking fixes found on a real Caido capture. Upgrade if you build from captures with tracking

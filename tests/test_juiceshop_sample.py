@@ -115,6 +115,19 @@ def test_cross_role_finds_the_real_authorization_questions(model):
     assert "GET /api/Cards" in {x["endpoint"] for x in anon_vs_user["high_only"]}
 
 
+def test_cross_role_names_the_authorization_question_for_each_divergence(model):
+    r = cross_role(model, "anon", "user")
+    ends = lambda k: {x["endpoint"] for x in r[k]}
+    assert "PUT /api/Products/{id}" in ends("low_writes")             # anonymous changed a product
+    assert "PUT /api/Products/{id}" not in ends("object_reads")       # a write is not listed as a read
+    assert "GET /rest/track-order/{id}" in ends("object_reads")       # an object fetched by id: a BOLA question
+    assert "GET /api/Addresss" in ends("enforced")                    # 401 for anon, 200 for user: the control
+    assert all(r["headline"][k] == len(r[k]) for k in r["headline"])
+    for k in r["headline"]:
+        for x in r[k]:
+            assert x["family"] and x["unknown"] and x["next"] and x["evidence"]
+
+
 def test_bql_over_the_real_capture(conn):
     assert bql.run_query(conn, "role:anon AND resp.code:401").total >= 5
     assert bql.run_query(conn, "resp.code.gte:500").total >= 5

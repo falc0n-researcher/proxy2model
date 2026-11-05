@@ -35,7 +35,9 @@ src/proxy2model/
 ## Releasing
 
 1. Set `__version__` in `src/proxy2model/__init__.py` and give it a `## X.Y.Z` section in `CHANGELOG.md`.
-2. Rebuild the demo and example reports (`./demo.sh`, the Juice Shop loop in `docs/examples/README.md`).
+2. Rebuild the demo and example reports: `docs/demo` from `samples/burp-history-*.xml` (roles `user` and
+   `admin`, with `samples/osint-sample.json` as `osint.json`), and `docs/examples/juiceshop` with the
+   Juice Shop loop in `docs/examples/README.md`. Run `./demo.sh` from a fresh clone to check it still works.
 3. Look at it, not only the tests: open the report and the landing page, run `proxy2model` and a build,
    and record a few pages with `browse`. Unit tests do not see a stale logo or a broken flow.
 4. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`. The release workflow checks the tag

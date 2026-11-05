@@ -32,7 +32,9 @@ TOOLS = [
      "inputSchema": {"type": "object", "required": ["app", "expression"],
                      "properties": {"app": _APP, "expression": {"type": "string"},
                                     "limit": {"type": "integer", "minimum": 1, "maximum": 1000}}}},
-    {"name": "cross_role", "description": "What the lower-privileged role reached that only the higher one should.",
+    {"name": "cross_role", "description": "Authorization hypotheses between two roles: what the lower one reached "
+     "that looks privileged, objects it read by id, state it changed, what it never tried, and where it was denied; "
+     "each with the request that shows it and a safe next check.",
      "inputSchema": {"type": "object", "required": ["app", "low", "high"],
                      "properties": {"app": _APP, "low": {"type": "string"}, "high": {"type": "string"}}}},
     {"name": "builds", "description": "The builds of a model kept in graph.db, to pick two for diff.",
