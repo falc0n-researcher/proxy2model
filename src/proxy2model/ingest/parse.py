@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import base64
 import codecs
+import functools
 import json
 import os
 import re
@@ -455,16 +456,18 @@ def _exchange_secrets(req_headers, resp_headers) -> list[str]:
     return sorted((x for x in out if len(x) >= 8), key=len, reverse=True)
 
 
-def _scrubber(values: list[str]):
+def _scrubber(values) -> "callable":
+    """Mask every one of `values` wherever it appears in a text: one regex pass, longest first."""
+    values = tuple(sorted(set(values), key=len, reverse=True))
     if not values:
         return lambda text: text
+    return _compiled_scrubber(values)
 
-    def scrub(text: str) -> str:
-        for v in values:
-            if v in text:
-                text = text.replace(v, REDACTED)
-        return text
-    return scrub
+
+@functools.lru_cache(maxsize=8)
+def _compiled_scrubber(values: tuple):
+    rx = re.compile("|".join(map(re.escape, values)))
+    return lambda text: rx.sub(REDACTED, text) if text else text
 
 
 def _set_cookies(resp_headers) -> list[dict]:
@@ -580,18 +583,28 @@ def parse_items(path: str, role: str | None = None, stats: dict | None = None,
         stats = {}
     for k in ("items", "parsed", "skipped"):
         stats.setdefault(k, 0)
+    # A page script can send a value to a vendor (`fbp=…` in a URL, `visUuid="…"` in a body) before
+    # the cookie that carries it is ever set. So the file is read twice: first every cookie and
+    # credential value is collected from the headers, then each is masked wherever it appears.
+    known: set[str] = set()
+    for _ in _parse_path(path, role, {"items": 0, "parsed": 0, "skipped": 0}, (), (), known, True):
+        pass
+    yield from _parse_path(path, role, stats, skip_tools, only_tools, known, False)
+
+
+def _parse_path(path, role, stats, skip_tools, only_tools, known, collect):
     if path.lower().endswith(".csv"):
         caido = _caido_csv_header(path)
         if caido is not None:
-            yield from _parse_caido(path, role, stats, skip_tools, only_tools, caido)
+            yield from _parse_caido(path, role, stats, skip_tools, only_tools, caido, known, collect)
             return
-        yield from _parse_logger_csv(path, role, stats, skip_tools, only_tools)
+        yield from _parse_logger_csv(path, role, stats, skip_tools, only_tools, known, collect)
         return
     if _looks_like_caido_json(path):
-        yield from _parse_caido(path, role, stats, skip_tools, only_tools)
+        yield from _parse_caido(path, role, stats, skip_tools, only_tools, None, known, collect)
         return
     if path.lower().endswith(".har") or _looks_like_har(path):
-        yield from _parse_har(path, role, stats)
+        yield from _parse_har(path, role, stats, known, collect)
         return
     _check_no_entities(path)
     source = os.path.basename(path)
@@ -607,7 +620,7 @@ def parse_items(path: str, role: str | None = None, stats: dict | None = None,
             continue
         stats["items"] += 1
         try:
-            ex = _parse_item(elem, idx, role)
+            ex = _parse_item(elem, idx, role, known, collect)
             if ex is None:
                 stats["skipped"] += 1
             else:
@@ -687,7 +700,7 @@ def _b64_text(value: str) -> tuple[str, bool]:
     return "true", re.sub(r"\s+", "", v)
 
 
-def _parse_logger_csv(path, role, stats, skip_tools, only_tools):
+def _parse_logger_csv(path, role, stats, skip_tools, only_tools, known=None, collect=False):
     source = os.path.basename(path)
     skip = {t.strip().lower() for t in skip_tools if t.strip()}
     only = {t.strip().lower() for t in only_tools if t.strip()}
@@ -720,7 +733,7 @@ def _parse_logger_csv(path, role, stats, skip_tools, only_tools):
             # a response that stops at the spreadsheet cell limit and never recovered is cut short
             if not row.get("_spilled") and _CELL_LIMIT <= len(row.get("Response") or "") < 32768:
                 SubElement(item, "truncated").text = "1"
-            ex = _parse_item(item, idx, role)
+            ex = _parse_item(item, idx, role, known, collect)
         except Exception:
             ex = None
         if ex is None:
@@ -924,17 +937,17 @@ def _har_entries(f, chunk: int = 1 << 20):
         raise ValueError("not a HAR file (no log.entries)")
 
 
-def _parse_har(path, role, stats):
+def _parse_har(path, role, stats, known=None, collect=False):
     """A HAR file (browser DevTools, Hetty, mitmproxy, ZAP, Charles ...), read as if it were a Burp export.
 
     Streamed: entries are read and turned into exchanges one at a time, never the whole file at once.
     """
     source = os.path.basename(path)
     with open(path, encoding="utf-8-sig", errors="replace") as f:
-        yield from _har_exchanges(_har_entries(f), source, role, stats)
+        yield from _har_exchanges(_har_entries(f), source, role, stats, known, collect)
 
 
-def _har_exchanges(entries, source, role, stats):
+def _har_exchanges(entries, source, role, stats, known=None, collect=False):
     idx = 1
     item_no = -1
     while True:
@@ -948,7 +961,7 @@ def _har_exchanges(entries, source, role, stats):
         stats["items"] += 1
         try:
             item = _har_item(entry) if isinstance(entry, dict) else None
-            ex = _parse_item(item, idx, role) if item is not None else None
+            ex = _parse_item(item, idx, role, known, collect) if item is not None else None
         except Exception:
             ex = None
         if ex is None:
@@ -1039,7 +1052,7 @@ def _caido_records(path: str, csv_header: list[str] | None):
             raise ValueError(f"not a Caido export (not a valid JSON array: {e})")
 
 
-def _parse_caido(path, role, stats, skip_tools, only_tools, csv_header=None):
+def _parse_caido(path, role, stats, skip_tools, only_tools, csv_header=None, known=None, collect=False):
     """A Caido HTTP history export (JSON or CSV), read as if it were a Burp export. Streamed.
 
     `source` (intercept, replay, automate ...) plays the part of Logger++'s Tool column for
@@ -1064,7 +1077,7 @@ def _parse_caido(path, role, stats, skip_tools, only_tools, csv_header=None):
         stats["items"] += 1
         try:
             item = _caido_item(rec)
-            ex = _parse_item(item, idx, role) if item is not None else None
+            ex = _parse_item(item, idx, role, known, collect) if item is not None else None
         except Exception:
             ex = None
         if ex is None:
@@ -1076,13 +1089,23 @@ def _parse_caido(path, role, stats, skip_tools, only_tools, csv_header=None):
         yield ex
 
 
-def parse_elements(items, source: str, role: str | None = None, stats: dict | None = None):
+def parse_elements(items, source: str, role: str | None = None, stats: dict | None = None,
+                   known: set | None = None):
     """Like parse_items, for <item> elements already in memory (the crawler's output).
 
     The crawler hands over what it fetched without ever writing a raw
     request/response to disk; redaction still happens here, before an Exchange
-    leaves this module.
+    leaves this module. `known` keeps the cookie and credential values seen so far (pass the same
+    set for every batch of one session); the batch is read for them before any of it is masked.
     """
+    if known is None:
+        known = set()
+    items = list(items)
+    for elem in items:
+        try:
+            _parse_item(elem, 0, role, known, True)
+        except Exception:
+            pass
     if stats is None:
         stats = {}
     for k in ("items", "parsed", "skipped"):
@@ -1091,7 +1114,7 @@ def parse_elements(items, source: str, role: str | None = None, stats: dict | No
     for item_no, elem in enumerate(items):
         stats["items"] += 1
         try:
-            ex = _parse_item(elem, idx, role)
+            ex = _parse_item(elem, idx, role, known)
         except Exception:
             ex = None
         if ex is None:
@@ -1108,7 +1131,10 @@ def _int(text: str | None, default=None):
     return int(t) if t.isdigit() else default
 
 
-def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
+def _parse_item(elem, idx: int, role: str | None, known: set | None = None, collect: bool = False) -> Exchange | None:
+    """One <item> as a masked Exchange. `known` holds cookie and credential values seen anywhere in the
+    capture; each is masked wherever it appears, not only beside its own name. With `collect`, the item
+    only adds its values to `known` and nothing is built."""
     method = (_text(elem.find("method")) or "GET").strip().upper()
     host = (_text(elem.find("host")) or "").strip().lower()
     port = _int(_text(elem.find("port")), 0)
@@ -1134,6 +1160,11 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
     resp_head, resp_body_b = _split_http(resp_raw) if resp_raw else ("", b"")
     req_start, req_headers = _parse_headers(req_head)
     resp_start, resp_headers = _parse_headers(resp_head)
+    own_secrets = _exchange_secrets(req_headers, resp_headers)
+    if known is not None:
+        known.update(own_secrets)
+        if collect:
+            return None
     if status is None and resp_start.startswith("HTTP/"):
         status = _int(resp_start.split(" ")[1] if " " in resp_start else None)
 
@@ -1156,7 +1187,7 @@ def _parse_item(elem, idx: int, role: str | None) -> Exchange | None:
     preflight = method == "OPTIONS" and bool(_header(req_headers, "access-control-request-method"))
 
     secrets: list[SecretFingerprint] = []
-    scrub = _scrubber(_exchange_secrets(req_headers, resp_headers))
+    scrub = _scrubber(known if known else own_secrets)
     red_path, s0 = redact_path(path)
     red_path = scrub(red_path)
     ptemplate = route_template(red_path, template_path(red_path))

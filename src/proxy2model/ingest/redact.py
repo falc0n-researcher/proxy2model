@@ -55,7 +55,10 @@ SENSITIVE_PARAM_HINTS = (
     # WordPress/Django/.NET nonces, __VIEWSTATE and friends
     "sessid", "nonce", "xsrf", "viewstate", "eventvalidation", "verification",
     # a value that is itself a credential, whatever the field is called around it
-    "cookie", "credential", "bearer",
+    "cookie", "credential", "bearer", "hmac",
+    # personal data with no shape to catch it by: a phone number is just ten digits
+    "phone", "mobile", "msisdn", "tel", "whatsapp", "email", "dob", "birth", "aadhaar", "aadhar",
+    "passport", "pan", "gstin", "ssn",
 )
 
 # Names that are innocuous alone (`new=true`) but are the password fields of a
@@ -250,6 +253,8 @@ def redact_body(body: str) -> tuple[str, list[SecretFingerprint]]:
 # `accessToken` and `user[password]` are caught, not just the exact hints.
 _KV_ANY = re.compile(r"(^|[?&;,#\s])([A-Za-z0-9_.\-\[\]]{1,64})(\s*=\s*)([^&;#\s\"'<>]+)")
 _JSON_ANY = re.compile(r'"((?:[^"\\]|\\.){1,64})"(\s*:\s*)("(?:[^"\\]|\\.)*"|-?\d[\d.eE+-]*|true|false|null)')
+# JSON kept inside a script string, its quotes escaped: var cfg = "{\"token\":\"…\"}"
+_JSON_ESC = re.compile(r'\\"([A-Za-z0-9_.$@\-\[\]]{1,64})\\"(\s*:\s*)(\\"(?:(?!\\").){0,500}\\"|-?\d[\d.eE+-]*|true|false|null)')
 
 
 _INPUT_TAG = re.compile(r"<input\b[^>]*>", re.I)
@@ -281,7 +286,8 @@ def redact_named(text: str) -> str:
         return text
 
     names = [m.group(2) for m in _KV_ANY.finditer(text)] + \
-            [m.group(1) for m in _JSON_ANY.finditer(text)]
+            [m.group(1) for m in _JSON_ANY.finditer(text)] + \
+            ([m.group(1) for m in _JSON_ESC.finditer(text)] if '\\"' in text else [])
     group = _is_credential_group(names)
     sens = lambda n: _is_sensitive_param(n) or (group and _leaf(n) in _CREDENTIAL_GROUP)
 
@@ -329,6 +335,15 @@ def redact_named(text: str) -> str:
     text = _HEADER_LINE.sub(lambda m: m.group(1) + m.group(2) + REDACTED, text)
     text = _KV_ANY.sub(_kv, text)
     text = _JSON_ANY.sub(_json, text)
+
+    def _json_esc(m: re.Match) -> str:
+        val = m.group(3)[2:-2] if m.group(3).startswith('\\"') else m.group(3)
+        if sens(m.group(1)) and REDACTED not in val and not _is_error_constant(val):
+            return '\\"' + m.group(1) + '\\"' + m.group(2) + '\\"' + REDACTED + '\\"'
+        return m.group(0)
+
+    if '\\"' in text:
+        text = _JSON_ESC.sub(_json_esc, text)
 
     def _live(v: str) -> bool:
         return bool(v) and REDACTED not in v and not _is_error_constant(v)

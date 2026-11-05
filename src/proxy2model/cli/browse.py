@@ -226,6 +226,7 @@ def cmd_browse(args) -> int:
     if recorder.error:
         print(ui.warn(f"recording stopped early: {recorder.error}"), file=sys.stderr)
     live.flush()
+    live.finish()
     if not live.saved:
         print(f"\n  nothing in scope was recorded ({', '.join(scope)})")
         return 1

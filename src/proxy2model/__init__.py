@@ -1,5 +1,5 @@
 """proxy2model — turn captured proxy traffic into an evidence-backed web-app model."""
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 
 import os as _os
 

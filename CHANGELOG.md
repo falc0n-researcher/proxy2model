@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.1
+
+Masking fixes found on a real Caido capture. Upgrade if you build from captures with tracking
+scripts or OTP flows: 2.0.0 could write some of these values to its outputs.
+
+- **Cookie and credential values are masked wherever they appear.** Page scripts send tracking ids
+  to vendors (`fbp=…` in a URL, `visUuid="…"` in a page) before the cookie that carries them is set.
+  An export is now read for every cookie, Set-Cookie and credential value first, and each is masked
+  everywhere. `browse` keeps them in memory only and masks what it saved earlier when the session ends.
+- **Escaped JSON is masked by name.** `\"token\":\"…\"` inside a script string was left as it was.
+- **Personal fields are masked by name:** phone, mobile, email, date of birth, Aadhaar, PAN,
+  passport, GSTIN, and `hmac` signatures. A phone number has no shape to catch it by.
+- Caido HTTP history exports (JSON and CSV) are checked against a real 880-request capture.
+
 ## 2.0.0
 
 proxy2model is the new name of burp2model. Its history up to 1.3.0 is in

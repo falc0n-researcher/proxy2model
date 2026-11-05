@@ -2,7 +2,9 @@
 Live capture: exchanges recorded while you browse are masked as they arrive, appended to
 `inputs/browse.jsonl`, and the model is rebuilt every few seconds while anything new comes in.
 
-Only the masked record is ever written; a restart continues where the last session stopped.
+Only the masked record is ever written; a restart continues where the last session stopped. The cookie
+and credential values seen during the session are held in memory only, so a value a page script sent
+before its cookie was set is masked when the batch is saved, or at the latest when the session ends.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ import threading
 import time
 from xml.etree.ElementTree import Element
 
-from .parse import Exchange, parse_elements
+from .parse import Exchange, _scrubber, parse_elements
 
 
 class Live:
@@ -27,6 +29,7 @@ class Live:
         self.stats = {"items": 0, "parsed": 0, "skipped": 0}
         self.received = 0
         self.saved = 0
+        self.known: set[str] = set()                 # raw values, never written
         if os.path.exists(path):
             with open(path, encoding="utf-8") as f:
                 self.saved = sum(1 for line in f if line.strip() and '"_stats"' not in line[:12])
@@ -34,7 +37,7 @@ class Live:
     def ingest(self, items: list[Element]) -> tuple[int, int]:
         """Parse and mask each recorded <item>; returns (accepted, skipped)."""
         stats: dict = {}
-        parsed = list(parse_elements(items, source="live", role=self.role, stats=stats))
+        parsed = list(parse_elements(items, source="live", role=self.role, stats=stats, known=self.known))
         skipped = len(items) - len(parsed)
         with self.lock:
             for ex in parsed:
@@ -53,7 +56,8 @@ class Live:
             self.pending, self.stats = [], {"items": 0, "parsed": 0, "skipped": 0}
         if not batch and not stats["items"]:
             return 0
-        lines = [json.dumps(ex.to_record()) for ex in batch]
+        mask = self._mask()
+        lines = [mask(json.dumps(ex.to_record())) for ex in batch]
         lines.append(json.dumps({"_stats": stats, "_version": 1}))
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with open(self.path, "a", encoding="utf-8") as f:
@@ -62,6 +66,28 @@ class Live:
             os.fsync(f.fileno())
         self.saved += len(batch)
         return len(batch)
+
+    def _mask(self):
+        """Mask every value learned so far, as it appears inside a JSON-encoded record."""
+        with self.lock:
+            values = list(self.known)
+        return _scrubber({json.dumps(v)[1:-1] for v in values} | set(values))
+
+    def finish(self) -> None:
+        """Mask, in what was saved earlier, the values learned later in the session."""
+        if not self.known or not os.path.exists(self.path):
+            return
+        mask = self._mask()
+        with open(self.path, encoding="utf-8") as f:
+            text = f.read()
+        masked = mask(text)
+        if masked != text:
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(masked)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, self.path)
 
 
 class Rebuilder(threading.Thread):
