@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.0
 
 - **`cross-role` names the authorization question.** Besides privileged-looking paths reached and
   what only the higher role tried, it lists objects the lower role read by id (BOLA questions),
