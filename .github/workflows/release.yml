@@ -38,7 +38,15 @@ jobs:
         with:
           name: dist
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      # a version uploaded by hand (2.0.0 went up with a token) is not published twice
+      - name: Already on PyPI?
+        id: pypi
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/proxy2model/$version/json")
+          echo "exists=$([ "$code" = 200 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.pypi.outputs.exists != 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
     needs: pypi
