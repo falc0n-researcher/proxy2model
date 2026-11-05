@@ -2869,8 +2869,8 @@
       ]
     },
     {
-      "id": "endpoint:POST:localhost:/rest/2fa/disable",
-      "label": "POST /rest/2fa/disable",
+      "id": "endpoint:POST:{base}:/rest/2fa/disable",
+      "label": "POST {base}/rest/2fa/disable",
       "type": "endpoint",
       "layer": 4,
       "api_state": "STATIC_ONLY",
@@ -2880,8 +2880,8 @@
       ]
     },
     {
-      "id": "endpoint:POST:localhost:/rest/2fa/setup",
-      "label": "POST /rest/2fa/setup",
+      "id": "endpoint:POST:{base}:/rest/2fa/setup",
+      "label": "POST {base}/rest/2fa/setup",
       "type": "endpoint",
       "layer": 4,
       "api_state": "STATIC_ONLY",
@@ -2891,8 +2891,8 @@
       ]
     },
     {
-      "id": "endpoint:POST:localhost:/rest/2fa/verify",
-      "label": "POST /rest/2fa/verify",
+      "id": "endpoint:POST:{base}:/rest/2fa/verify",
+      "label": "POST {base}/rest/2fa/verify",
       "type": "endpoint",
       "layer": 4,
       "api_state": "STATIC_ONLY",
@@ -2913,8 +2913,8 @@
       ]
     },
     {
-      "id": "endpoint:PUT:localhost:/rest/basket/{param}/coupon/{param}",
-      "label": "PUT /rest/basket/{param}/coupon/{param}",
+      "id": "endpoint:PUT:{base}:/rest/basket/{param}/coupon/{param}",
+      "label": "PUT {base}/rest/basket/{param}/coupon/{param}",
       "type": "endpoint",
       "layer": 4,
       "api_state": "STATIC_ONLY",
@@ -9552,7 +9552,7 @@
     },
     {
       "source": "script:localhost/main.js",
-      "target": "endpoint:POST:localhost:/rest/2fa/disable",
+      "target": "endpoint:POST:{base}:/rest/2fa/disable",
       "type": "REFERENCES",
       "state": "INFERRED",
       "evidence": [
@@ -9561,7 +9561,7 @@
     },
     {
       "source": "script:localhost/main.js",
-      "target": "endpoint:POST:localhost:/rest/2fa/setup",
+      "target": "endpoint:POST:{base}:/rest/2fa/setup",
       "type": "REFERENCES",
       "state": "INFERRED",
       "evidence": [
@@ -9579,7 +9579,7 @@
     },
     {
       "source": "script:localhost/main.js",
-      "target": "endpoint:POST:localhost:/rest/2fa/verify",
+      "target": "endpoint:POST:{base}:/rest/2fa/verify",
       "type": "REFERENCES",
       "state": "INFERRED",
       "evidence": [
@@ -9615,7 +9615,7 @@
     },
     {
       "source": "script:localhost/main.js",
-      "target": "endpoint:PUT:localhost:/rest/basket/{param}/coupon/{param}",
+      "target": "endpoint:PUT:{base}:/rest/basket/{param}/coupon/{param}",
       "type": "REFERENCES",
       "state": "INFERRED",
       "evidence": [

@@ -92,11 +92,9 @@ def corners(w: int, h: int) -> str:
 
 
 def mark(x: float, y: float, scale: float) -> str:
-    """The proxy2model mark: two outlined layers under a solid one, in ink and ember."""
-    return (f'<g transform="translate({x},{y}) scale({scale})" fill="none" stroke-linecap="round" stroke-linejoin="round">'
-            f'<path d="M6 21.5 16 26l10-4.5" stroke="{CREAM}" stroke-opacity="0.55" stroke-width="2"/>'
-            f'<path d="M6 16.5 16 21l10-4.5" stroke="{CREAM}" stroke-opacity="0.8" stroke-width="2"/>'
-            f'<path d="M16 6 6 10.5 16 15l10-4.5z" fill="{EMBER}" stroke="none"/></g>')
+    """The falc0n mark, as on the profile hero and the falc0n.tech icon."""
+    return (f'<g transform="translate({x},{y}) scale({scale})">'
+            f'<path d="M37 39.5 L72 39.5 L26.5 66.5 Q43 51 46 49 Q39 45 37 39.5 Z" fill="{EMBER}"/></g>')
 
 
 def hero() -> str:
@@ -119,7 +117,7 @@ def hero() -> str:
             f'<text x="142" y="361" font-size="14.5"><tspan fill="{EMBER}">fa1c0n@recon ~ $</tspan><tspan fill="{CREAM}"> proxy2model juiceshop-*.xml -w juiceshop</tspan></text>',
             f'<text x="1128" y="361" text-anchor="end" font-size="14.5" font-weight="500"><tspan fill="{BRIGHT}">{f["endpoints"]} endpoints</tspan>'
             f'<tspan fill="{FAINT}"> &#183; </tspan><tspan fill="{BRIGHT}">{f["code_only"]} never called</tspan></text>',
-            mark(1032, 70, 2.6), "</g>"]
+            mark(1000, 22, 1.9), "</g>"]
     return svg(w, h, "\n".join(body))
 
 

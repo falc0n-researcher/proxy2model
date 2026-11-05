@@ -202,6 +202,22 @@
         ],
         "anonymous_requests": 0,
         "requests": 2,
+        "response_fields": {
+          "200": {
+            "$.email": [
+              "email"
+            ],
+            "$.id": [
+              "integer"
+            ],
+            "$.role": [
+              "string"
+            ],
+            "$.name": [
+              "string"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -284,6 +300,18 @@
         ],
         "anonymous_requests": 0,
         "requests": 2,
+        "response_fields": {
+          "200": {
+            "$.users[].id": [
+              "integer"
+            ]
+          },
+          "403": {
+            "$.error": [
+              "string"
+            ]
+          }
+        },
         "api_state": "RUNTIME_ONLY"
       },
       "evidence": [
@@ -319,6 +347,13 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "201": {
+            "$.id": [
+              "integer"
+            ]
+          }
+        },
         "api_state": "RUNTIME_ONLY"
       },
       "evidence": [
@@ -384,6 +419,16 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.events[].action": [
+              "string"
+            ],
+            "$.events[].actor": [
+              "integer"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -596,6 +641,13 @@
         "credentials": [],
         "anonymous_requests": 1,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.ok": [
+              "boolean"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -678,6 +730,13 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.orders[].id": [
+              "integer"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -712,6 +771,16 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.id": [
+              "integer"
+            ],
+            "$.total": [
+              "integer"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -746,6 +815,13 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.paid": [
+              "boolean"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -828,6 +904,13 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.url": [
+              "string"
+            ]
+          }
+        },
         "api_state": "RUNTIME_ONLY"
       },
       "evidence": [
@@ -877,6 +960,13 @@
         ],
         "anonymous_requests": 0,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.data.me.id": [
+              "integer"
+            ]
+          }
+        },
         "api_state": "BOTH"
       },
       "evidence": [
@@ -953,6 +1043,13 @@
         "credentials": [],
         "anonymous_requests": 1,
         "requests": 1,
+        "response_fields": {
+          "200": {
+            "$.valid": [
+              "boolean"
+            ]
+          }
+        },
         "api_state": "RUNTIME_ONLY"
       },
       "evidence": [
@@ -1988,7 +2085,7 @@
   "secrets": [
     {
       "kind": "authorization",
-      "hmac_12": "1a131a037897",
+      "hmac_12": "47491211f20b",
       "length": 84,
       "entropy": 4.8,
       "count": 5,
@@ -2002,7 +2099,7 @@
     },
     {
       "kind": "cookie",
-      "hmac_12": "dd3be6f16ad0",
+      "hmac_12": "02bd5d2ce28b",
       "length": 44,
       "entropy": 4.88,
       "count": 5,
@@ -2016,7 +2113,7 @@
     },
     {
       "kind": "email",
-      "hmac_12": "52c1428ca728",
+      "hmac_12": "8ff92d940a07",
       "length": 22,
       "entropy": 3.79,
       "count": 1,
@@ -2026,7 +2123,7 @@
     },
     {
       "kind": "email",
-      "hmac_12": "18b96f73ab01",
+      "hmac_12": "726ece83fdcc",
       "length": 15,
       "entropy": 3.46,
       "count": 2,
@@ -2036,7 +2133,7 @@
     },
     {
       "kind": "authorization",
-      "hmac_12": "f7c73756e4ea",
+      "hmac_12": "e9d866fab183",
       "length": 68,
       "entropy": 5.08,
       "count": 10,
@@ -2055,7 +2152,7 @@
     },
     {
       "kind": "cookie",
-      "hmac_12": "52c049a6f39c",
+      "hmac_12": "554ea1e72463",
       "length": 43,
       "entropy": 4.65,
       "count": 10,
@@ -2074,7 +2171,7 @@
     },
     {
       "kind": "set-cookie",
-      "hmac_12": "133b0a0111f6",
+      "hmac_12": "72575ea89aec",
       "length": 72,
       "entropy": 4.82,
       "count": 1,
@@ -2084,7 +2181,7 @@
     },
     {
       "kind": "set-cookie",
-      "hmac_12": "acb6949babd9",
+      "hmac_12": "1b55b842c4cd",
       "length": 17,
       "entropy": 3.57,
       "count": 1,
@@ -2094,7 +2191,7 @@
     },
     {
       "kind": "set-cookie",
-      "hmac_12": "f94e229680a8",
+      "hmac_12": "925f5bfddd9b",
       "length": 58,
       "entropy": 4.78,
       "count": 1,
@@ -2104,7 +2201,7 @@
     },
     {
       "kind": "password",
-      "hmac_12": "8af3630cd4f5",
+      "hmac_12": "0a2877531917",
       "length": 12,
       "entropy": 3.08,
       "count": 1,
@@ -2114,7 +2211,7 @@
     },
     {
       "kind": "email",
-      "hmac_12": "b54a3c400fc6",
+      "hmac_12": "90ab0929f041",
       "length": 21,
       "entropy": 3.69,
       "count": 1,
@@ -2124,7 +2221,7 @@
     },
     {
       "kind": "card",
-      "hmac_12": "586e6c6d8325",
+      "hmac_12": "e47c98c13d98",
       "length": 19,
       "entropy": 0.91,
       "count": 2,
@@ -2134,7 +2231,7 @@
     },
     {
       "kind": "$.cvv",
-      "hmac_12": "ab081c844e0e",
+      "hmac_12": "0fe900cfee0e",
       "length": 3,
       "entropy": 1.58,
       "count": 1,
@@ -2144,7 +2241,7 @@
     },
     {
       "kind": "aws_key",
-      "hmac_12": "7e50a621e948",
+      "hmac_12": "13e1862f28df",
       "length": 20,
       "entropy": 3.68,
       "count": 1,
@@ -2154,7 +2251,7 @@
     },
     {
       "kind": "path:email",
-      "hmac_12": "e9fa56b258fd",
+      "hmac_12": "ecfd3e12ad6c",
       "length": 17,
       "entropy": 3.34,
       "count": 1,
@@ -2164,7 +2261,7 @@
     },
     {
       "kind": "path:token",
-      "hmac_12": "7b13d080fa29",
+      "hmac_12": "272dc3d2c986",
       "length": 12,
       "entropy": 3.58,
       "count": 1,

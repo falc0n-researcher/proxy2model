@@ -2,9 +2,10 @@
      proxy2model · README
      The artwork in assets/readme/ is self-contained SVG (Nippo embedded).
      Do not edit it by hand: change scripts/build_readme_svgs.py and run it.
+     Links are absolute so the same file renders on PyPI.
      ───────────────────────────────────────────────────────────── -->
 
-<img src="./assets/readme/hero.svg" alt="proxy2model: every endpoint, page and role you captured, each tied to its request" width="100%">
+<img src="https://raw.githubusercontent.com/falc0n-researcher/proxy2model/main/assets/readme/hero.svg" alt="proxy2model: every endpoint, page and role you captured, each tied to its request" width="100%">
 
 ### `//` the instrument
 
@@ -14,7 +15,7 @@ role can see. **proxy2model does that bookkeeping from the traffic you already c
 goes to testing. It does not scan or attack, and it never calls anything a vulnerability. It tells
 you what is there, which request proves it, and what the capture could not show.
 
-[![license](https://img.shields.io/badge/license-apache--2.0-e85002?style=flat-square&labelColor=0b0a08)](LICENSE)
+[![license](https://img.shields.io/badge/license-apache--2.0-e85002?style=flat-square&labelColor=0b0a08)](https://github.com/falc0n-researcher/proxy2model/blob/main/LICENSE)
 [![tests](https://img.shields.io/github/actions/workflow/status/falc0n-researcher/proxy2model/ci.yml?branch=main&style=flat-square&label=tests&labelColor=0b0a08&color=ded2c0)](https://github.com/falc0n-researcher/proxy2model/actions/workflows/ci.yml)
 [![secrets](https://img.shields.io/badge/secrets-masked%20before%20write-ded2c0?style=flat-square&labelColor=0b0a08)](#-boundaries)
 ![runtime](https://img.shields.io/badge/python%203.10%2B-no%20dependencies-6f6a61?style=flat-square&labelColor=0b0a08)
@@ -23,7 +24,7 @@ you what is there, which request proves it, and what the capture could not show.
 
 ### `//` field test — the bundled capture
 
-<img src="./assets/readme/ledger.svg" alt="From the Juice Shop sample: 104 endpoints mapped, 16 named in code but never called, 79 secret values masked" width="100%">
+<img src="https://raw.githubusercontent.com/falc0n-researcher/proxy2model/main/assets/readme/ledger.svg" alt="From the Juice Shop sample: 104 endpoints mapped, 16 named in code but never called, 79 secret values masked" width="100%">
 
 Four [OWASP Juice Shop](https://owasp.org/www-project-juice-shop/) sessions (417 requests as anonymous,
 user, accounting and admin), modelled in about two seconds on a laptop:
@@ -59,7 +60,7 @@ Every value is masked as it is read. One model comes out: a report, a SQLite gra
 OpenAPI, and a compact package for an AI. Runs locally.
 
 ```bash
-pip install git+https://github.com/falc0n-researcher/proxy2model
+pip install proxy2model
 ```
 
 ```bash
@@ -67,7 +68,7 @@ proxy2model history.xml -w shop     # build from an export
 proxy2model browse                  # or open a browser and use the app (asks for URL, scope, mode)
 
 proxy2model query shop help         # ask the model; answers cite requests, no AI involved
-proxy2model mcp --out "$PWD/proxy2model-out"   # or let an AI agent ask (docs/ai.md)
+proxy2model mcp --out "$PWD/proxy2model-out"   # or let an AI agent ask (see Using it with an AI)
 ```
 
 `./demo.sh` builds the bundled sample. `proxy2model` on its own lists the everyday commands;
@@ -107,11 +108,11 @@ one reaches any output.
 
 ### `//` field manual
 
-- **01 · [Capturing traffic](docs/capture.md)** — Burp, Caido, HAR, `browse`, roles.
-- **02 · [Crawling a running app](docs/crawling.md)** — `crawl` and scripted journeys.
-- **03 · [How it works](docs/model.md)** — what is in the model and how it is built.
-- **04 · [Querying the model](docs/querying.md)** — `query`, BQL, graph reach, diffs between builds.
-- **05 · [Using it with an AI](docs/ai.md)** — `context.json` and the MCP server.
-- **[Skill](skill/)** — the same method as a playbook for an AI, nothing to install.
+- **01 · [Capturing traffic](https://github.com/falc0n-researcher/proxy2model/blob/main/docs/capture.md)** — Burp, Caido, HAR, `browse`, roles.
+- **02 · [Crawling a running app](https://github.com/falc0n-researcher/proxy2model/blob/main/docs/crawling.md)** — `crawl` and scripted journeys.
+- **03 · [How it works](https://github.com/falc0n-researcher/proxy2model/blob/main/docs/model.md)** — what is in the model and how it is built.
+- **04 · [Querying the model](https://github.com/falc0n-researcher/proxy2model/blob/main/docs/querying.md)** — `query`, BQL, graph reach, diffs between builds.
+- **05 · [Using it with an AI](https://github.com/falc0n-researcher/proxy2model/blob/main/docs/ai.md)** — `context.json` and the MCP server.
+- **[Skill](https://github.com/falc0n-researcher/proxy2model/tree/main/skill)** — the same method as a playbook for an AI, nothing to install.
 
 <sub>`fa1c0n@recon ~ $` &nbsp; captured traffic in · a model of the app out · every line cited</sub>
